@@ -70,7 +70,34 @@ You only need a GitHub account. Optionally, add a Discord server and/or a Telegr
 
 In your new repository, open the **Actions** tab. If GitHub asks, click **"I understand my workflows, go ahead and enable them"**.
 
-### 3. Fill in the Setup form
+### 3. Run the setup wizard in your browser (tick boxes, Hebrew or English)
+
+1. In your repository, click **Code → Codespaces → Create codespace on main**. GitHub opens VS Code in your browser with everything installed (about 1 minute).
+2. In the terminal at the bottom, run:
+   ```bash
+   python setup_wizard.py
+   ```
+3. Answer with the arrow keys and **Space**. You never type search terms; they come from the roles you tick:
+
+   | Step | What you choose |
+   |---|---|
+   | Language | English / עברית |
+   | What did you study? | e.g. Electrical & Electronics Engineering, Computer Science, Data Science, Mechanical, Industrial Engineering, Life Sciences, Business, Marketing, Design, Practical engineer / technician (several allowed) |
+   | Roles (sub-menus per field) | e.g. *EE → Hardware & RF → RF / Antenna Engineer*, *CS → Development → Backend Developer* (53 roles) |
+   | Experience level | Student · Junior · Mid · Senior · Management. Decides which titles are hidden and the max years |
+   | Your experience | 0 … 10+ years |
+   | Regions | Tel Aviv & Gush Dan · Center & Shfela · Sharon · Jerusalem · Haifa & North · South · Remote, or anywhere |
+   | Skills on your CV | Typical skills of the roles you ticked. Ticked = your skills; unticked = gaps that lower the score |
+   | Sources | Pre-ticked to suit your field |
+   | Apply-queue threshold | 40–80 |
+
+4. At the end the wizard saves `config.yaml`, **commits and pushes it**, and lists the secret names for step 4.
+5. Close the codespace (**Code → Codespaces → ⋯ → Delete**). You don't need it again unless you want to redo the setup.
+
+Codespaces is free for personal accounts within GitHub's monthly quota; a setup session uses a few minutes of it. To add or edit roles, edit `roles_catalog.yaml`.
+
+<details>
+<summary><b>Alternative: the quick Setup form</b> (type instead of ticking boxes)</summary>
 
 **Actions → Setup → Run workflow**. Fill in the form, then click **Run workflow**:
 
@@ -90,6 +117,8 @@ In your new repository, open the **Actions** tab. If GitHub asks, click **"I und
 About a minute later, the run creates **`config.yaml`** in your repository. Its summary page lists the exact **secret names** to add in the next step.
 
 You can fine-tune everything later by editing `config.yaml` on GitHub (open the file → ✏️ pencil → **Commit changes**). Every option is explained in `config.example.yaml`. Running Setup again starts over; the old config is kept as `config.yaml.bak-<date>`.
+
+</details>
 
 ### 4. Add your notification secrets
 
@@ -237,7 +266,7 @@ You can also run JobRadar on your own computer or a Raspberry Pi instead of GitH
 ```bash
 git clone https://github.com/navehvag/JobRadar.git
 cd JobRadar
-bash install.sh            # Linux / macOS / Pi: venv + packages + terminal setup wizard
+bash install.sh            # Linux / macOS / Pi: venv + packages + the menu setup wizard
                            # (bash install.sh --cron also schedules it with cron)
 .venv/bin/python main.py --dry-run
 ```
@@ -259,7 +288,7 @@ Locally, secrets go in a `.env` file (the wizard writes it for you) instead of G
 |---|---|
 | `python main.py` / `--dry-run` / `--mark-seen` / `--rescore` / `--limit 5` | Same modes as the Scan workflow |
 | `python apply_queue.py [--all]` | List the apply queue |
-| `python setup_wizard.py` | Interactive setup in the terminal |
+| `python setup_wizard.py` | Menu / checkbox setup in the terminal (English / עברית) |
 | `python israeli_boards.py` | Quick test of AllJobs / JobMaster |
 | `python telegram_notifier.py --setup` | Print your Telegram chat / topic ids |
 
@@ -287,7 +316,10 @@ JobRadar/
 ├── .github/workflows/
 │   ├── setup.yml         # "Setup" form → config.yaml
 │   └── scan.yml          # "Scan": schedule + Run workflow (scan / dry-run / mark-seen / rescore)
-├── setup_wizard.py       # Terminal wizard, and --from-env for the Setup workflow
+├── setup_wizard.py       # Menu/checkbox wizard (he/en); --github in Codespaces; --from-env for the form
+├── roles_catalog.yaml    # Fields → roles → title words, search terms, typical skills (he/en); regions
+├── tui.py                # Checkbox / menu terminal UI (questionary, numbered fallback)
+├── .devcontainer/        # Codespaces setup (run the wizard in the browser)
 ├── install.sh            # venv + packages + wizard (+ --cron)
 ├── run_scan.sh           # What cron runs when running locally
 ├── main.py               # scrape → filter → dedup → score → notify → apply queue → state

@@ -1,0 +1,495 @@
+# Role catalog used by setup_wizard.py — pick from lists instead of typing search terms.
+#
+# fields: what you studied / your background (first menu). Each field has groups of roles.
+# A role:
+#   en / he:     display names
+#   keywords:    words in a JOB TITLE that mean this role (whole words, any language)
+#   search:      search terms sent to the job boards (Hebrew + English)
+#   skills:      typical skills — the wizard lets you tick the ones YOUR CV shows; the rest
+#                count as "gaps" (requirements you don't have). "a|b" = b is an alias of a.
+# Add roles or fields freely; the wizard reads this file every time.
+
+fields:
+  ee:
+    en: "Electrical & Electronics Engineering"
+    he: "הנדסת חשמל ואלקטרוניקה"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin, defense, mobileye, amazon, workday]
+    groups:
+      - en: "Hardware & RF"
+        he: "חומרה ו-RF"
+        roles:
+          - id: hardware
+            en: "Hardware Engineer"
+            he: "מהנדס/ת חומרה"
+            keywords: [hardware, hw, electronics, electronic, חומרה, אלקטרוניקה]
+            search: [hardware engineer, electronics engineer, מהנדס חומרה, מהנדס אלקטרוניקה]
+            skills: ["schematics|circuit design|סכמות", "analog|אנלוגי", digital design, "oscilloscope|lab equipment|מעבדה", "bring-up|bring up", pcb, matlab, python]
+          - id: board
+            en: "Board Design Engineer"
+            he: "מהנדס/ת תכן כרטיסים"
+            keywords: [board design, board designer, pcb, layout, תכן כרטיסים]
+            search: [board design engineer, תכן כרטיסים]
+            skills: ["orcad|allegro|altium", "si/pi|signal integrity|power integrity", "high-speed|ddr|pcie", schematics, "power supply|dc-dc"]
+          - id: rf
+            en: "RF / Antenna Engineer"
+            he: "מהנדס/ת RF ואנטנות"
+            keywords: [rf, antenna, antennas, microwave, radar, אנטנות, אנטנה, מיקרוגל, מכ"ם]
+            search: [RF engineer, antenna engineer, מהנדס RF, אנטנות]
+            skills: ["rf|radio frequency", antenna, "ads|cst|hfss", "vna|spectrum analyzer|network analyzer", matlab, radar]
+          - id: power
+            en: "Power Electronics Engineer"
+            he: "מהנדס/ת אלקטרוניקת הספק"
+            keywords: [power electronics, power supply, אלקטרוניקת הספק]
+            search: [power electronics engineer, אלקטרוניקת הספק]
+            skills: ["dc-dc|power supply|converter", magnetics, "ltspice|spice|simulation", motor control]
+          - id: electrical
+            en: "Electrical Engineer (power & infrastructure)"
+            he: "מהנדס/ת חשמל (תשתיות ומתח)"
+            keywords: [electrical engineer, מהנדס חשמל, תכנון חשמל, חשמל]
+            search: [electrical engineer, מהנדס חשמל]
+            skills: [autocad, "electrical design|תכנון חשמל", "high voltage|מתח גבוה", plc, "power systems|מערכות הספק"]
+      - en: "Chip Design & FPGA"
+        he: "תכן שבבים ו-FPGA"
+        roles:
+          - id: asic
+            en: "ASIC / VLSI Design Engineer"
+            he: "מהנדס/ת תכן ASIC / VLSI"
+            keywords: [asic, vlsi, rtl, chip design, physical design, logic design, תכן לוגי]
+            search: [ASIC design engineer, VLSI engineer, RTL design engineer, תכן לוגי]
+            skills: ["verilog|systemverilog", rtl, synthesis, "sta|timing analysis", "cadence|synopsys", python]
+          - id: dv
+            en: "Design Verification Engineer"
+            he: "מהנדס/ת וריפיקציה"
+            keywords: [verification, dv, design verification, וריפיקציה]
+            search: [verification engineer, design verification, וריפיקציה]
+            skills: [systemverilog, uvm, "python|scripting", "c++"]
+          - id: fpga
+            en: "FPGA Engineer"
+            he: "מהנדס/ת FPGA"
+            keywords: [fpga]
+            search: [FPGA engineer, מהנדס FPGA]
+            skills: ["vhdl|verilog", "vivado|quartus", systemverilog, "axi|pcie"]
+      - en: "Integration, Validation & Embedded"
+        he: "אינטגרציה, ולידציה ומשובצות"
+        roles:
+          - id: validation
+            en: "Validation / Test Engineer"
+            he: "מהנדס/ת ולידציה ובדיקות"
+            keywords: [validation, test engineer, post-silicon, ולידציה, מהנדס בדיקות]
+            search: [validation engineer, test engineer, מהנדס בדיקות, ולידציה]
+            skills: [python, "oscilloscope|lab equipment", "test automation|automation", labview, linux]
+          - id: integration
+            en: "Integration / Systems Engineer"
+            he: "מהנדס/ת אינטגרציה ומערכת"
+            keywords: [integration, integrator, system engineer, systems engineer, אינטגרציה, מהנדס מערכת, הנדסת מערכת]
+            search: [integration engineer, system engineer, מהנדס אינטגרציה, מהנדס מערכת]
+            skills: ["system integration|integration", "troubleshooting|debugging", linux, python, "networking|tcp/ip"]
+          - id: embedded
+            en: "Embedded / Firmware Engineer"
+            he: "מהנדס/ת Embedded וקושחה"
+            keywords: [embedded, firmware, fw, bsp, rtos, משובץ, משובצות, קושחה]
+            search: [embedded engineer, firmware engineer, embedded software, מהנדס embedded, קושחה]
+            skills: ["c|embedded c", "c++", rtos, "microcontroller|mcu|stm32", linux, "spi|i2c|uart"]
+      - en: "Customer-facing & management"
+        he: "מול לקוחות וניהול"
+        roles:
+          - id: fae
+            en: "Field Application / Sales Engineer"
+            he: "מהנדס/ת אפליקציה / מכירות"
+            keywords: [field application engineer, fae, application engineer, applications engineer, sales engineer, pre-sales, מהנדס אפליקציה, מהנדס מכירות]
+            search: [field application engineer, sales engineer, מהנדס אפליקציה, מהנדס מכירות]
+            skills: ["customer support|customers|לקוחות", "presentations|demos|הדרכות", technical support]
+          - id: eng_pm
+            en: "Engineering Project Manager"
+            he: "מנהל/ת פרויקטים הנדסיים"
+            keywords: [project manager, project engineer, מנהל פרויקטים, מנהל פרויקט, מהנדס פרויקט, מנהל/ת פרויקטים]
+            search: [engineering project manager, project engineer, מנהל פרויקטים הנדסי]
+            skills: ["project management|ניהול פרויקטים", "planning|schedules|לוחות זמנים", "vendors|suppliers|ספקים", "ms project|primavera"]
+
+  cs:
+    en: "Computer Science / Software Engineering"
+    he: "מדעי המחשב / הנדסת תוכנה"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin]
+    groups:
+      - en: "Development"
+        he: "פיתוח"
+        roles:
+          - id: backend
+            en: "Backend Developer"
+            he: "מפתח/ת Backend"
+            keywords: [backend, back-end, server side, צד שרת]
+            search: [backend developer, backend engineer, מפתח backend]
+            skills: [python, java, "node.js|nodejs", "go|golang", "c#|.net", sql, "rest|api", docker, "aws|gcp|azure", microservices]
+          - id: frontend
+            en: "Frontend Developer"
+            he: "מפתח/ת Frontend"
+            keywords: [frontend, front-end, react, angular, vue, צד לקוח]
+            search: [frontend developer, react developer, מפתח frontend]
+            skills: [javascript, typescript, react, angular, vue, "html|css"]
+          - id: fullstack
+            en: "Full Stack Developer"
+            he: "מפתח/ת Full Stack"
+            keywords: [full stack, fullstack, full-stack]
+            search: [full stack developer, מפתח full stack]
+            skills: ["javascript|typescript", react, "node.js|nodejs", python, sql, "aws|cloud"]
+          - id: mobile
+            en: "Mobile Developer"
+            he: "מפתח/ת מובייל"
+            keywords: [mobile, ios, android, react native, flutter, מובייל]
+            search: [mobile developer, android developer, ios developer, מפתח מובייל]
+            skills: [kotlin, swift, java, flutter, react native]
+          - id: embedded_sw
+            en: "Embedded Software Developer"
+            he: "מפתח/ת תוכנה משובצת"
+            keywords: [embedded software, embedded developer, low level, low-level, c developer, משובץ, embedded]
+            search: [embedded software developer, מפתח embedded, C developer]
+            skills: ["c|embedded c", "c++", linux, rtos, "drivers|device drivers", "microcontroller|mcu"]
+      - en: "Infrastructure, quality & security"
+        he: "תשתיות, איכות ואבטחה"
+        roles:
+          - id: devops
+            en: "DevOps / SRE / Cloud Engineer"
+            he: "מהנדס/ת DevOps / ענן"
+            keywords: [devops, sre, site reliability, cloud engineer, platform engineer]
+            search: [devops engineer, sre, cloud engineer]
+            skills: ["kubernetes|k8s", docker, terraform, "aws|gcp|azure", "ci/cd|jenkins|github actions", linux, "python|bash"]
+          - id: qa
+            en: "QA / Automation Engineer"
+            he: "בודק/ת תוכנה ואוטומציה"
+            keywords: [qa, quality assurance, automation engineer, tester, בודק תוכנה, בודקת תוכנה, אוטומציה]
+            search: [qa engineer, automation engineer, בודק תוכנה, אוטומציה]
+            skills: ["selenium|playwright|cypress", "python|java", "api testing|postman", test plans, jira]
+          - id: security
+            en: "Cyber Security Engineer / Analyst"
+            he: "מהנדס/ת / אנליסט/ית סייבר"
+            keywords: [security engineer, security analyst, cyber, cybersecurity, soc analyst, סייבר, אבטחת מידע]
+            search: [security engineer, cyber security analyst, סייבר]
+            skills: [network security, siem, "penetration testing|pentest", python, cloud security]
+          - id: it
+            en: "IT / System Administrator"
+            he: "IT / מנהל/ת מערכות"
+            keywords: [system administrator, sysadmin, helpdesk, it support, מנהל מערכות, מנהל רשת, תמיכה טכנית]
+            search: [system administrator, IT support, מנהל מערכות]
+            skills: ["windows server", "active directory", networking, linux, "office 365|microsoft 365"]
+      - en: "Data & AI"
+        he: "דאטה ו-AI"
+        roles:
+          - id: data_eng
+            en: "Data Engineer"
+            he: "מהנדס/ת דאטה"
+            keywords: [data engineer, etl, big data]
+            search: [data engineer, מהנדס דאטה]
+            skills: [sql, python, spark, airflow, kafka, etl]
+          - id: ml
+            en: "Machine Learning / AI Engineer"
+            he: "מהנדס/ת ML / AI"
+            keywords: [machine learning, ml engineer, ai engineer, deep learning, computer vision, nlp, llm]
+            search: [machine learning engineer, ai engineer, deep learning]
+            skills: [python, "pytorch|tensorflow", machine learning, deep learning, "llm|nlp", computer vision]
+
+  data:
+    en: "Data Science / Statistics / Mathematics"
+    he: "מדעי הנתונים / סטטיסטיקה / מתמטיקה"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin]
+    groups:
+      - en: "Analytics & data science"
+        he: "אנליטיקה ומדעי הנתונים"
+        roles:
+          - id: data_analyst
+            en: "Data Analyst"
+            he: "אנליסט/ית נתונים"
+            keywords: [data analyst, bi analyst, analyst, אנליסט, אנליסטית, אנליסט/ית]
+            search: [data analyst, bi analyst, אנליסט נתונים]
+            skills: [sql, excel, "tableau|power bi|looker", python, statistics]
+          - id: data_scientist
+            en: "Data Scientist"
+            he: "דאטה סיינטיסט/ית"
+            keywords: [data scientist, data science]
+            search: [data scientist]
+            skills: [python, machine learning, statistics, sql, "pandas|numpy"]
+          - id: bi_dev
+            en: "BI Developer"
+            he: "מפתח/ת BI"
+            keywords: [bi developer, business intelligence]
+            search: [bi developer, מפתח bi]
+            skills: [sql, "power bi|tableau", etl, data modeling]
+          - id: product_analyst
+            en: "Product Analyst"
+            he: "אנליסט/ית מוצר"
+            keywords: [product analyst]
+            search: [product analyst]
+            skills: [sql, "a/b testing", excel, python]
+          - id: algo
+            en: "Algorithm Engineer / Researcher"
+            he: "מהנדס/ת אלגוריתמים / חוקר/ת"
+            keywords: [algorithm, algorithms, researcher, אלגוריתמים, חוקר]
+            search: [algorithm engineer, algorithm developer, אלגוריתמים]
+            skills: [python, matlab, "c++", "signal processing|dsp", computer vision, machine learning]
+
+  mech:
+    en: "Mechanical Engineering"
+    he: "הנדסת מכונות"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin, defense]
+    groups:
+      - en: "Mechanical"
+        he: "מכונות"
+        roles:
+          - id: mech_design
+            en: "Mechanical Design Engineer"
+            he: "מהנדס/ת מכונות / תכן מכני"
+            keywords: [mechanical engineer, mechanical design, מהנדס מכונות, תכן מכני, מכני]
+            search: [mechanical engineer, מהנדס מכונות, תכן מכני]
+            skills: [solidworks, "creo|catia", "gd&t", "fea|ansys", "drafting|שרטוט"]
+          - id: process
+            en: "Manufacturing / Process Engineer"
+            he: "מהנדס/ת תהליך / ייצור"
+            keywords: [manufacturing engineer, process engineer, production engineer, מהנדס תהליך, מהנדס ייצור]
+            search: [process engineer, manufacturing engineer, מהנדס תהליך, מהנדס ייצור]
+            skills: ["lean|six sigma", solidworks, quality, spc]
+          - id: mechatronics
+            en: "Mechatronics / Robotics Engineer"
+            he: "מהנדס/ת מכטרוניקה / רובוטיקה"
+            keywords: [mechatronics, robotics, robot, מכטרוניקה, רובוטיקה]
+            search: [robotics engineer, mechatronics engineer, רובוטיקה]
+            skills: [ros, "c++", python, motion control, plc]
+
+  ie:
+    en: "Industrial Engineering & Management"
+    he: "הנדסת תעשייה וניהול"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin]
+    groups:
+      - en: "Operations & management"
+        he: "תפעול וניהול"
+        roles:
+          - id: operations
+            en: "Operations / Supply Chain / Planning"
+            he: "תפעול / שרשרת אספקה / תכנון"
+            keywords: [operations, supply chain, logistics, planner, תפעול, לוגיסטיקה, שרשרת אספקה, תכנון ייצור]
+            search: [operations, supply chain, planner, לוגיסטיקה, תכנון ייצור]
+            skills: ["erp|sap|priority", excel, planning, procurement]
+          - id: quality
+            en: "Quality Engineer"
+            he: "מהנדס/ת איכות"
+            keywords: [quality engineer, quality, מהנדס איכות, איכות]
+            search: [quality engineer, מהנדס איכות]
+            skills: ["iso 9001", spc, "root cause|8d", audits]
+          - id: pm
+            en: "Project / Program Manager"
+            he: "מנהל/ת פרויקטים"
+            keywords: [project manager, program manager, project coordinator, מנהל פרויקטים, מנהל פרויקט, מנהל/ת פרויקטים]
+            search: [project manager, program manager, מנהל פרויקטים]
+            skills: ["project management|ניהול פרויקטים", planning, budget, stakeholders, "jira|ms project"]
+          - id: analyst
+            en: "Business / Systems Analyst"
+            he: "מנתח/ת מערכות / אנליסט/ית עסקי/ת"
+            keywords: [business analyst, systems analyst, מנתח מערכות, מנתחת מערכות]
+            search: [business analyst, systems analyst, מנתח מערכות]
+            skills: [requirements, sql, process mapping, jira]
+
+  life:
+    en: "Biomedical / Life Sciences"
+    he: "הנדסה ביו-רפואית / מדעי החיים"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin]
+    groups:
+      - en: "Life sciences"
+        he: "מדעי החיים"
+        roles:
+          - id: biomed
+            en: "Biomedical Engineer"
+            he: "מהנדס/ת ביו-רפואי/ת"
+            keywords: [biomedical, medical device, מכשור רפואי, ביו-רפואי]
+            search: [biomedical engineer, medical device engineer, מכשור רפואי]
+            skills: [medical devices, "iso 13485", "verification|validation", matlab]
+          - id: regulatory
+            en: "Regulatory Affairs"
+            he: "רגולציה"
+            keywords: [regulatory, regulatory affairs, רגולציה]
+            search: [regulatory affairs, רגולציה]
+            skills: [fda, "ce|mdr", "iso 13485", documentation]
+          - id: clinical
+            en: "Clinical Research"
+            he: "מחקר קליני"
+            keywords: [clinical research, cra, clinical, קליני]
+            search: [clinical research associate, מחקר קליני]
+            skills: [gcp, clinical trials]
+          - id: scientist
+            en: "Lab / Research Scientist"
+            he: "מדען/ית / חוקר/ת מעבדה"
+            keywords: [scientist, research associate, lab, חוקר, מעבדה]
+            search: [research scientist, research associate, חוקר מעבדה]
+            skills: [pcr, cell culture, "hplc|analytical chemistry"]
+
+  business:
+    en: "Business / Economics / Accounting"
+    he: "מנהל עסקים / כלכלה / חשבונאות"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin]
+    groups:
+      - en: "Finance"
+        he: "כספים"
+        roles:
+          - id: accountant
+            en: "Accountant / Bookkeeper"
+            he: "רואה חשבון / מנהל/ת חשבונות"
+            keywords: [accountant, bookkeeper, רואה חשבון, מנהל חשבונות, מנהלת חשבונות, חשב, הנהלת חשבונות]
+            search: [accountant, רואה חשבון, מנהל חשבונות]
+            skills: ["priority|sap", excel, ifrs, reconciliations]
+          - id: fin_analyst
+            en: "Financial Analyst / Economist"
+            he: "אנליסט/ית פיננסי/ת / כלכלן/ית"
+            keywords: [financial analyst, fp&a, economist, אנליסט פיננסי, כלכלן, כלכלנית]
+            search: [financial analyst, אנליסט פיננסי, כלכלן]
+            skills: [excel, financial modeling, valuation, "power bi|tableau"]
+      - en: "Business"
+        he: "עסקים"
+        roles:
+          - id: sales
+            en: "Sales / Account Executive"
+            he: "מכירות / ניהול לקוחות"
+            keywords: [sales, account executive, account manager, sdr, bdr, business development, מכירות, נציג מכירות, מנהל לקוחות]
+            search: [account executive, sales representative, business development, מכירות]
+            skills: ["crm|salesforce|hubspot", negotiation, b2b, saas]
+          - id: cs
+            en: "Customer Success"
+            he: "הצלחת לקוח"
+            keywords: [customer success, csm, onboarding specialist]
+            search: [customer success manager, customer success]
+            skills: [crm, onboarding, saas, account management]
+          - id: hr
+            en: "HR / Recruiter"
+            he: "משאבי אנוש / גיוס"
+            keywords: [recruiter, hr, talent acquisition, human resources, גיוס, משאבי אנוש, רכז גיוס]
+            search: [recruiter, hr generalist, רכזת גיוס, משאבי אנוש]
+            skills: [recruiting, interviewing, hris, employer branding]
+          - id: product
+            en: "Product Manager"
+            he: "מנהל/ת מוצר"
+            keywords: [product manager, product owner, מנהל מוצר, מנהלת מוצר]
+            search: [product manager, מנהל מוצר]
+            skills: [product management, roadmap, user research, sql, jira]
+
+  marketing:
+    en: "Marketing / Communications"
+    he: "שיווק / תקשורת"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin]
+    groups:
+      - en: "Marketing"
+        he: "שיווק"
+        roles:
+          - id: digital
+            en: "Digital / Performance Marketing"
+            he: "שיווק דיגיטלי / פרפורמנס"
+            keywords: [digital marketing, performance marketing, ppc, sem, ua, שיווק דיגיטלי, קמפיינר]
+            search: [digital marketing, performance marketing, קמפיינר, שיווק דיגיטלי]
+            skills: ["google ads", "facebook ads|meta ads", "google analytics|analytics", excel]
+          - id: content
+            en: "Content / Copywriter"
+            he: "תוכן / קופירייטינג"
+            keywords: [content writer, copywriter, content, קופירייטר, כתיבת תוכן]
+            search: [content writer, copywriter, קופירייטר]
+            skills: [copywriting, seo, wordpress, social media]
+          - id: seo
+            en: "SEO Specialist"
+            he: "מומחה/ית SEO"
+            keywords: [seo]
+            search: [seo specialist, קידום אתרים]
+            skills: [seo, google search console, content, analytics]
+
+  design:
+    en: "Design"
+    he: "עיצוב"
+    sources: [goozali, hiremetech, alljobs, jobmaster, linkedin]
+    groups:
+      - en: "Design"
+        he: "עיצוב"
+        roles:
+          - id: ux
+            en: "UX / UI / Product Designer"
+            he: "מעצב/ת UX / UI / מוצר"
+            keywords: [ux, ui, ux/ui, ui/ux, product designer, מעצב ux, מעצבת ux]
+            search: [ux designer, ui designer, product designer, מעצב ux]
+            skills: [figma, user research, prototyping, design systems]
+          - id: graphic
+            en: "Graphic Designer"
+            he: "מעצב/ת גרפי/ת"
+            keywords: [graphic designer, מעצב גרפי, מעצבת גרפית]
+            search: [graphic designer, מעצב גרפי]
+            skills: [photoshop, illustrator, indesign, "after effects"]
+
+  practical:
+    en: "Practical Engineer / Technician (הנדסאי / טכנאי)"
+    he: "הנדסאי/ת / טכנאי/ת"
+    sources: [alljobs, jobmaster, linkedin, defense]
+    groups:
+      - en: "Technical"
+        he: "טכני"
+        roles:
+          - id: tech_electronics
+            en: "Electronics / Electrical Technician"
+            he: "טכנאי/ת / הנדסאי/ת אלקטרוניקה וחשמל"
+            keywords: [technician, electronics technician, טכנאי, הנדסאי אלקטרוניקה, הנדסאי חשמל, טכנאי אלקטרוניקה]
+            search: [electronics technician, טכנאי אלקטרוניקה, הנדסאי אלקטרוניקה, הנדסאי חשמל]
+            skills: ["soldering|הלחמה", "lab equipment|oscilloscope", "troubleshooting|תקלות", "schematics|שרטוטים"]
+          - id: tech_mech
+            en: "Mechanical Technician / Drafter"
+            he: "הנדסאי/ת מכונות / שרטט/ת"
+            keywords: [mechanical technician, drafter, הנדסאי מכונות, שרטט, שרטטת]
+            search: [הנדסאי מכונות, שרטט]
+            skills: [solidworks, autocad, "drafting|שרטוט"]
+
+# Experience levels (multi-select). max_years = the highest experience a job may ask for.
+levels:
+  student:    {en: "Student / internship", he: "סטודנט/ית / התמחות", max_years: 1}
+  junior:     {en: "Junior / entry level (0–2 years)", he: "ג'וניור / ללא ניסיון (0–2 שנים)", max_years: 2}
+  mid:        {en: "Mid level (2–5 years)", he: "ביניים (2–5 שנים)", max_years: 5}
+  senior:     {en: "Senior (5+ years)", he: "בכיר/ה (5+ שנים)", max_years: 30}
+  management: {en: "Team lead / management", he: "ראש צוות / ניהול", max_years: 30}
+
+# Words hidden from titles unless that level is chosen
+level_words:
+  student: [student, intern, internship, סטודנט, סטודנטית, סטודנט/ית, התמחות]
+  senior: [senior, sr, staff, principal, expert, fellow, architect, experienced, בכיר, בכירה, מומחה, מומחית, ארכיטקט, מנוסה]
+  management: [lead, leader, manager, director, vp, head of, chief, ראש צוות, ראש תחום, ראש מחלקה, מנהל, מנהלת, מוביל, מובילה, ראש/ת, ראש.ת]
+
+# Regions (multi-select). A job passes if its location contains one of the words.
+regions:
+  tlv:
+    en: "Tel Aviv & Gush Dan"
+    he: "תל אביב וגוש דן"
+    places: [Tel Aviv, Tel-Aviv, Tel Aviv District, Ramat Gan, Givatayim, Bnei Brak, Holon, Bat Yam, Petah Tikva, Petach Tikva, Petah Tiqva, Or Yehuda, Yehud, Kiryat Ono, תל אביב, ת"א, רמת גן, גבעתיים, בני ברק, חולון, בת ים, פתח תקווה, פתח תקוה, אור יהודה, יהוד, קרית אונו, גוש דן]
+  center:
+    en: "Center & Shfela"
+    he: "מרכז ושפלה"
+    places: [Center, Central, Center District, Rishon, Rehovot, Ness Ziona, Nes Ziona, Lod, Ramla, Yavne, Modiin, Modi'in, Airport City, Rosh HaAyin, Rosh Ha'Ayin, Shoham, Be'er Ya'akov, Shfela, מרכז, ראשון לציון, רחובות, נס ציונה, לוד, רמלה, יבנה, מודיעין, ראש העין, שוהם, באר יעקב, נתב"ג, שפלה]
+  sharon:
+    en: "Sharon"
+    he: "השרון"
+    places: [Sharon, Herzliya, Herzlia, Ra'anana, Raanana, Kfar Saba, Hod Hasharon, Ramat Hasharon, Netanya, Even Yehuda, Kadima, Tzur Yigal, הרצליה, רעננה, כפר סבא, הוד השרון, רמת השרון, נתניה, שרון]
+  jerusalem:
+    en: "Jerusalem area"
+    he: "ירושלים והסביבה"
+    places: [Jerusalem, Beit Shemesh, Mevaseret, Ariel, Barkan, ירושלים, בית שמש, מבשרת, אריאל, ברקן]
+  north:
+    en: "Haifa & North"
+    he: "חיפה והצפון"
+    places: [Haifa, Yokneam, Yoqneam, Caesarea, Migdal HaEmek, Nazareth, Karmiel, Hadera, Zichron, Tefen, Nahariya, Afula, North, חיפה, יקנעם, קיסריה, מגדל העמק, נצרת, כרמיאל, חדרה, זכרון, תפן, נהריה, עפולה, צפון]
+  south:
+    en: "South"
+    he: "הדרום"
+    places: [Be'er Sheva, Beer Sheva, Beersheba, Ashdod, Ashkelon, Kiryat Gat, Dimona, Sderot, Eilat, South, באר שבע, אשדוד, אשקלון, קרית גת, דימונה, שדרות, אילת, דרום]
+  remote:
+    en: "Remote / hybrid"
+    he: "מהבית / היברידי"
+    places: [Remote, Work from home, Hybrid, מהבית, היברידי]
+
+# Sources (multi-select); defaults come from the chosen fields
+sources:
+  goozali:   {en: "Goozali (hi-tech board)", he: "Goozali (לוח הייטק)"}
+  hiremetech: {en: "HireMeTech", he: "HireMeTech"}
+  alljobs:   {en: "AllJobs", he: "AllJobs"}
+  jobmaster: {en: "JobMaster", he: "JobMaster"}
+  linkedin:  {en: "LinkedIn (no login)", he: "LinkedIn (ללא התחברות)"}
+  indeed:    {en: "Indeed", he: "Indeed"}
+  defense:   {en: "Defense companies (IAI/Elta, Elbit)", he: "חברות ביטחוניות (תעשייה אווירית/אלתא, אלביט)"}
+  mobileye:  {en: "Mobileye", he: "מובילאיי"}
+  amazon:    {en: "Amazon Israel (incl. Annapurna Labs)", he: "אמזון ישראל (כולל Annapurna)"}
+  workday:   {en: "Chip & tech companies on Workday (NVIDIA, Intel, KLA, ...)", he: "חברות שבבים וטכנולוגיה (NVIDIA, Intel, KLA ועוד)"}

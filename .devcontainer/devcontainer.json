@@ -1,0 +1,7 @@
+{
+  "name": "JobRadar",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "pip install --prefer-binary requests pyyaml python-dotenv questionary",
+  "postAttachCommand": "echo 'Run:  python setup_wizard.py --github'",
+  "customizations": { "codespaces": { "openFiles": ["README.md"] } }
+}

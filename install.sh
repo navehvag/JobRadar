@@ -12,7 +12,7 @@ echo "==> Creating virtual environment (.venv)"
 python3 -m venv .venv
 .venv/bin/pip install -q --upgrade pip
 # Core packages first, so the scanner works even if the optional LinkedIn/Indeed part fails
-.venv/bin/pip install -q --prefer-binary requests pyyaml python-dotenv
+.venv/bin/pip install -q --prefer-binary requests pyyaml python-dotenv questionary
 # python-jobspy needs pandas. On small ARM boards (Pi Zero / Pi 1, armv6) the newest pandas has
 # no prebuilt wheel and building it fails — --prefer-binary picks the newest version that has one
 # (Raspberry Pi OS gets those from piwheels.org).
