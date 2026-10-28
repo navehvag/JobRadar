@@ -151,7 +151,7 @@ def parse_jobmaster_page(page_html: str) -> list[dict]:
             "Job ID": f"jm-{key}",
             "Job Title": title,
             "Company": company or "JobMaster (company hidden)",
-            "Location": location.replace("\n", ", ") if location else None,
+            "Location": ", ".join(x.strip() for x in re.split(r"[,\n]+", location) if x.strip()) if location else None,
             "Job Description": desc,
             "Posted": parse_hebrew_age(age),
             "Position Link": f"{JOBMASTER_BASE}/jobs/checknum.asp?key={key}",
