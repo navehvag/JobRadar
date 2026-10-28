@@ -253,6 +253,8 @@ py -m venv .venv
 
 Locally, secrets go in a `.env` file (the wizard writes it for you) instead of GitHub Secrets.
 
+**Raspberry Pi Zero / Pi 1 (armv6):** `install.sh` installs with `--prefer-binary`. That picks a pandas version with a prebuilt package, because building the newest one on these boards fails. If `python-jobspy` still can't be installed, only LinkedIn / Indeed are skipped and everything else works.
+
 | Command | What it does |
 |---|---|
 | `python main.py` / `--dry-run` / `--mark-seen` / `--rescore` / `--limit 5` | Same modes as the Scan workflow |

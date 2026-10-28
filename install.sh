@@ -11,10 +11,14 @@ command -v python3 >/dev/null || { echo "python3 is required (3.10+)"; exit 1; }
 echo "==> Creating virtual environment (.venv)"
 python3 -m venv .venv
 .venv/bin/pip install -q --upgrade pip
-if ! .venv/bin/pip install -q -r requirements.txt; then
-    echo "!! Full install failed (python-jobspy / pandas). Installing the core packages only —"
-    echo "   LinkedIn / Indeed will be skipped."
-    .venv/bin/pip install -q requests pyyaml python-dotenv
+# Core packages first, so the scanner works even if the optional LinkedIn/Indeed part fails
+.venv/bin/pip install -q --prefer-binary requests pyyaml python-dotenv
+# python-jobspy needs pandas. On small ARM boards (Pi Zero / Pi 1, armv6) the newest pandas has
+# no prebuilt wheel and building it fails — --prefer-binary picks the newest version that has one
+# (Raspberry Pi OS gets those from piwheels.org).
+if ! .venv/bin/pip install -q --prefer-binary python-jobspy; then
+    echo "!! python-jobspy (LinkedIn / Indeed) could not be installed on this machine — those two"
+    echo "   sources will be skipped; everything else works. Or run JobRadar on GitHub Actions."
 fi
 chmod +x run_scan.sh
 
