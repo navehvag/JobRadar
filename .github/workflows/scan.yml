@@ -1,0 +1,88 @@
+name: Scan
+
+# Runs the job scanner on GitHub. Times are UTC: 07/10/13/16 UTC = 9/12/15/18 Israel time in
+# winter (10/13/16/19 in summer), Sunday–Thursday. Edit the cron line to change the schedule.
+on:
+  schedule:
+    - cron: "0 7,10,13,16 * * 0-4"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "scan = send new jobs · dry-run = only show · mark-seen = remember current jobs, send nothing · rescore = re-score all open jobs"
+        type: choice
+        options: [scan, dry-run, mark-seen, rescore]
+        default: dry-run
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jobradar-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    # runs only in your copy, never in the original JobRadar repository
+    if: github.repository != 'navehvag/JobRadar'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MODE: ${{ inputs.mode || 'scan' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt || pip install requests pyyaml python-dotenv
+
+      - name: Check setup
+        run: |
+          if [ ! -f config.yaml ]; then
+            echo "::error::config.yaml not found — run the Setup workflow first (Actions → Setup → Run workflow)"
+            exit 1
+          fi
+
+      - name: Run (${{ env.MODE }})
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+          TZ: Asia/Jerusalem
+        run: |
+          case "$MODE" in
+            scan)      python main.py ;;
+            dry-run)   python main.py --dry-run ;;
+            mark-seen) python main.py --mark-seen ;;
+            rescore)   python main.py --rescore ;;
+          esac 2>&1 | tee scan-output.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## JobRadar — $MODE"
+            echo '```'
+            tail -n 120 scan-output.txt 2>/dev/null || true
+            echo '```'
+            echo "### Apply queue (pending)"
+            echo '```'
+            python apply_queue.py 2>/dev/null | head -n 80 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save results
+        if: env.MODE != 'dry-run'
+        run: |
+          git config user.name "jobradar-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json apply_queue.json
+          if git diff --cached --quiet; then echo "nothing to save"; exit 0; fi
+          git commit -qm "Scan results $(TZ=Asia/Jerusalem date '+%F %H:%M') [$MODE]"
+          for i in 1 2 3; do
+            git pull -q --rebase && git push -q && exit 0
+            sleep 5
+          done
+          echo "::error::could not push results"; exit 1

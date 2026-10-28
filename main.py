@@ -38,6 +38,13 @@ def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = Fals
     """
     if load_dotenv:
         load_dotenv()
+    # On GitHub Actions every repository secret arrives as one JSON blob (ALL_SECRETS), so any
+    # webhook secret name from config.yaml works without listing it in the workflow
+    if os.environ.get("ALL_SECRETS"):
+        import json
+        for k, v in json.loads(os.environ["ALL_SECRETS"]).items():
+            if isinstance(v, str) and v and k not in os.environ:
+                os.environ[k] = v
 
     if not os.path.exists("config.yaml"):
         raise SystemExit("config.yaml not found — run `python setup_wizard.py` first.")

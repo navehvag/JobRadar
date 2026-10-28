@@ -1,0 +1,83 @@
+name: Setup
+
+# The terminal wizard as a form: Actions → Setup → Run workflow → fill in → Run.
+# Creates config.yaml (+ empty state.json / apply_queue.json) and commits them.
+# Run it again to start over; or edit config.yaml directly on GitHub (pencil icon).
+on:
+  workflow_dispatch:
+    inputs:
+      job_types:
+        description: "Job types and the words in a job TITLE that mean them. 'Type: word, word; Type2: word'"
+        required: true
+        default: "Backend Developer: backend, server side, python developer; Data Analyst: data analyst, bi analyst"
+      skills:
+        description: "Skills your CV shows. 'skill:weight' (default 2), aliases with |, e.g. python:3, sql, docker|containers"
+        required: true
+        default: "python:3, sql:3, docker|containers, git:1"
+      gaps:
+        description: "Common requirements you DON'T have (lower the score), e.g. java, kubernetes|k8s"
+        required: false
+        default: ""
+      experience_years:
+        description: "Your years of industry experience"
+        required: true
+        default: "1"
+      max_experience:
+        description: "Hide jobs asking for more than N years"
+        required: true
+        default: "4"
+      locations:
+        description: "Locations (a job passes if its location CONTAINS one). Empty = everywhere"
+        required: false
+        default: "Tel Aviv, Ramat Gan, Herzliya, Petah Tikva"
+      search_terms:
+        description: "Search terms for the job boards (Hebrew/English). Empty = job types + title words"
+        required: false
+        default: ""
+      sources:
+        description: "Sources: goozali, hiremetech, alljobs, jobmaster, linkedin, indeed, defense, mobileye, amazon, workday, companies"
+        required: true
+        default: "goozali, hiremetech, alljobs, jobmaster, linkedin"
+      exclude_words:
+        description: "Extra words that HIDE a job when in its title, e.g. sales, support"
+        required: false
+        default: ""
+      hide_senior:
+        description: "Hide senior / lead / manager / student / intern roles"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    if: github.repository != 'navehvag/JobRadar'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Create config.yaml
+        env:
+          SETUP_JOB_TYPES: ${{ inputs.job_types }}
+          SETUP_SKILLS: ${{ inputs.skills }}
+          SETUP_GAPS: ${{ inputs.gaps }}
+          SETUP_EXPERIENCE_YEARS: ${{ inputs.experience_years }}
+          SETUP_MAX_EXPERIENCE: ${{ inputs.max_experience }}
+          SETUP_LOCATIONS: ${{ inputs.locations }}
+          SETUP_SEARCH_TERMS: ${{ inputs.search_terms }}
+          SETUP_SOURCES: ${{ inputs.sources }}
+          SETUP_EXCLUDE_WORDS: ${{ inputs.exclude_words }}
+          SETUP_HIDE_SENIOR: ${{ inputs.hide_senior }}
+        run: |
+          [ -f config.yaml ] && cp config.yaml "config.yaml.bak-$(date +%Y%m%d-%H%M%S)" || true
+          python setup_wizard.py --from-env
+      - name: Commit
+        run: |
+          git config user.name "jobradar-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add config.yaml config.yaml.bak-* state.json apply_queue.json 2>/dev/null || git add config.yaml state.json apply_queue.json
+          git commit -qm "Setup: config.yaml from the Setup form" && git push -q || echo "nothing changed"

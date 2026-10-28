@@ -215,13 +215,9 @@ scan.log
 
 
 
-# Your personal data — never commit these to a public repo
+# Secrets — on GitHub they live in Settings → Secrets, never in a file
 .env
-config.yaml
-state.json
-apply_queue.json
-cvs/
-*.pdf
-*.docx
+# config.yaml, state.json, apply_queue.json and cvs/ ARE committed in YOUR private copy
+# (the workflows read and update them). Keep your copy private.
 dryrun.txt
 rescore.txt

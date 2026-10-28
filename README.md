@@ -1,8 +1,12 @@
 # JobRadar
 
-A self-hosted job scanner for job seekers in **any field**. It searches job boards several times a day and filters the results by your criteria. It scores every job against **your own CV(s)**, then posts new matches to **Discord** and/or **Telegram**. The best matches go into an apply queue, together with the CV to send.
+A job scanner for job seekers in **any field** that runs entirely on **GitHub**. You don't install anything or keep a computer on.
 
-It needs no AI or API keys: scoring is a transparent keyword model you control from one config file. The built-in sources focus on the **Israeli** job market (Goozali, HireMeTech, AllJobs, JobMaster, LinkedIn, local companies). The filters, job types and scoring work for any role.
+GitHub Actions searches job boards several times a day and filters the results by your criteria. It scores every job against **your CV(s)**, then posts new matches to **Discord** and/or **Telegram**. The best matches go into an apply queue, together with the CV to send.
+
+You set it up from a form, change settings by editing a file on GitHub, and run it from the **Actions** tab. Running it on your own machine is optional (see [Run locally](#run-locally-optional)).
+
+Scoring is a transparent keyword model you control from one config file, with no AI or API keys. The built-in sources focus on the **Israeli** job market (Goozali, HireMeTech, AllJobs, JobMaster, LinkedIn, local companies). The filters, job types and scoring work for any role.
 
 Based on [job-scanner](https://github.com/yairMar1/job-scanner) by Yair Margalit.
 
@@ -11,14 +15,14 @@ Based on [job-scanner](https://github.com/yairMar1/job-scanner) by Yair Margalit
 ## Contents
 
 - [How it works](#how-it-works)
-- [Quick start (5 minutes)](#quick-start-5-minutes)
-- [Step-by-step setup guide](#step-by-step-setup-guide)
-- [Scheduling (run it automatically)](#scheduling-run-it-automatically)
+- [Setup on GitHub (10 minutes, no installation)](#setup-on-github-10-minutes-no-installation)
 - [Using it day to day](#using-it-day-to-day)
+- [Changing the schedule](#changing-the-schedule)
 - [Configuration reference](#configuration-reference)
 - [Sources](#sources)
 - [How the match score works](#how-the-match-score-works)
 - [Being a good citizen](#being-a-good-citizen)
+- [Run locally (optional)](#run-locally-optional)
 - [Troubleshooting](#troubleshooting)
 - [Project structure](#project-structure)
 
@@ -27,10 +31,13 @@ Based on [job-scanner](https://github.com/yairMar1/job-scanner) by Yair Margalit
 ## How it works
 
 ```
-Job boards & company sites ──► Filter ──► Deduplicate ──► Score vs your CV ──┬─► Discord (channel per job type)
- (Goozali, HireMeTech,         title words,  never send the   which job type?   ├─► Telegram
-  AllJobs, JobMaster,          experience,   same job twice   how well does     └─► apply_queue.json (score ≥ N)
-  LinkedIn, Workday, ...)      location, age                  your CV match?
+             GitHub Actions — on a schedule (Sun–Thu, 4×/day) or when you click "Run workflow"
+ ┌──────────────────────────────────────────────────────────────────────────────────────────┐
+ │ Job boards ──► Filter ──► Deduplicate ──► Score vs your CV ──┬─► Discord (channel / type) │
+ │                                                              ├─► Telegram                 │
+ │                                                              └─► apply_queue.json         │
+ │ state.json + apply_queue.json are committed back to your repository after each run       │
+ └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 1. **Scrape.** Runs every source you enabled. If one site fails, it is skipped and the scan goes on.
@@ -38,180 +45,111 @@ Job boards & company sites ──► Filter ──► Deduplicate ──► Scor
    - its title matches one of your job types
    - it asks for no more than your max years of experience
    - it is in one of your locations
-   - it isn't older than your max age
+   - it isn't older than 30 days
    - its title has none of your excluded words (senior, intern, ...)
-3. **Deduplicate.** Never sends the same job twice, even when two sites list it (matched by company + title).
-4. **Score.** Each job gets a **job type** (by its title), and with it the CV to use, plus a **0–100 match** against that CV.
+3. **Deduplicate.** Never sends the same job twice, even when two sites list it (matched by company + title). Sent jobs are remembered in `state.json` in your repository.
+4. **Score.** Each job gets a **job type** (by its title), and with it the CV to use, plus a **0–100 match** against your skills.
 5. **Notify.** Each job goes to the Discord channel for its job type and/or to Telegram, showing the match % and the skills it matched.
-6. **Apply queue.** Jobs at or above your threshold go to `apply_queue.json`. Nothing is ever submitted automatically.
+6. **Apply queue.** Jobs at or above your threshold go to `apply_queue.json`, and each run's summary page lists them. Nothing is ever submitted automatically.
 
 ---
 
-## Quick start (5 minutes)
+## Setup on GitHub (10 minutes, no installation)
 
-**Linux / macOS / Raspberry Pi**
+You only need a GitHub account. Optionally, add a Discord server and/or a Telegram bot for notifications.
 
-```bash
-git clone https://github.com/<you>/JobRadar.git
-cd JobRadar
-bash install.sh            # creates .venv, installs packages, starts the setup wizard
-.venv/bin/python main.py --dry-run
-```
+### 1. Make your own private copy
 
-**Windows (PowerShell)**
+1. Open **https://github.com/navehvag/JobRadar**.
+2. Click **Use this template → Create a new repository**.
+3. Name it (e.g. `my-jobradar`), choose **Private**, and click **Create repository**.
 
-```powershell
-git clone https://github.com/<you>/JobRadar.git
-cd JobRadar
-py -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python setup_wizard.py
-.venv\Scripts\python main.py --dry-run
-```
+> Use **Private**. Your copy will contain your settings, CVs and job history. Don't *fork*: a fork of a public repository can't be private.
 
-The wizard asks everything it needs and writes `config.yaml` and `.env` for you.
+### 2. Turn on Actions
 
----
+In your new repository, open the **Actions** tab. If GitHub asks, click **"I understand my workflows, go ahead and enable them"**.
 
-## Step-by-step setup guide
+### 3. Fill in the Setup form
 
-### 0. Requirements
+**Actions → Setup → Run workflow**. Fill in the form, then click **Run workflow**:
 
-- **Python 3.10+** (`python3 --version`)
-- **git**
-- A machine that is on when you want scans to run. A laptop is fine for manual runs; a Raspberry Pi or any small always-on server is ideal for scheduled runs.
-- Optional:
-  - a **Discord** server where you can create channels and webhooks
-  - a **Telegram** bot
-
-`python-jobspy` (for LinkedIn / Indeed) pulls in pandas. If it fails to install on a small device, `install.sh` falls back to the core packages, and only LinkedIn / Indeed are skipped.
-
-### 1. Prepare before running the wizard (recommended)
-
-Have these ready. The wizard asks for each one, and you can leave most of them empty and add them later.
-
-| You'll be asked for | Example | Tips |
+| Field | Example | Notes |
 |---|---|---|
-| **Job types** | `Backend Developer, Data Analyst` | One per kind of role you apply for. Each can have its own CV and channel. |
-| **Title words per type** | `backend, server side, python developer` | Whole words matched in the job title, in any language. The first type is the default for jobs that match none. |
-| **A CV per type** (optional) | `~/Documents/cv-backend.pdf` | Copied into `cvs/<type>/`, and the apply queue tells you which one to send. |
-| **Max experience / age** | `4` years, `30` days | |
-| **Locations** | `Tel Aviv, Herzliya, Remote` | A job passes if its location *contains* one of these. Leave empty to accept all. |
-| **Excluded title words** | the defaults (senior, lead, intern ...) + yours | `Allow` phrases override them, e.g. "sales engineer" while "sales" is excluded. |
-| **Your skills** | `python:3, sql:3, docker\|containers, excel:1` | `:N` = weight (default 2), `\|` = aliases. **Only list what your CV really shows.** |
-| **Gaps** | `java, kubernetes\|k8s` | Common requirements you *don't* have. They lower the score. |
-| **Apply threshold** | `60` | Jobs scoring at least this go to the apply queue. |
-| **Search terms** | `Backend Developer, מפתח backend` | Used by HireMeTech / AllJobs / JobMaster / LinkedIn. |
-| **Sources on/off** | | See [Sources](#sources). |
-| **Discord webhook URLs** | one per channel, or one for all | See below. |
-| **Telegram bot token + chat id** | | Optional; see below. |
+| **job_types** | `Backend Developer: backend, server side; Data Analyst: data analyst, bi analyst` | `Type: title words; Type2: ...`. A job belongs to a type when its **title** contains one of the words (whole words, any language). The first type is the default for jobs that match none |
+| **skills** | `python:3, sql:3, docker\|containers, excel:1` | What your CV shows. `:N` = weight (default 2), `\|` = aliases. Only list what your CV really shows |
+| **gaps** | `java, kubernetes\|k8s` | Common requirements you *don't* have. They lower the score |
+| **experience_years** | `2` | Your years of industry experience |
+| **max_experience** | `4` | Hide jobs asking for more years than this |
+| **locations** | `Tel Aviv, Herzliya, Remote` | A job passes if its location *contains* one of these. Empty = everywhere |
+| **search_terms** | `backend developer, מפתח backend` | What to search on the job boards. Empty = your job types + title words |
+| **sources** | `goozali, hiremetech, alljobs, jobmaster, linkedin` | See [Sources](#sources). Also available: `indeed, defense, mobileye, amazon, workday, companies` |
+| **exclude_words** | `sales, support` | Extra title words that hide a job |
+| **hide_senior** | ✓ | Hides senior / lead / manager / student / intern roles (untick if you want those) |
 
-**Discord webhooks.** In your server:
-1. Create a channel per job type (or a single channel for everything).
-2. For each channel: **Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL**.
-3. Paste the URL when the wizard asks for it.
+About a minute later, the run creates **`config.yaml`** in your repository. Its summary page lists the exact **secret names** to add in the next step.
 
-A job type without its own URL uses the "all jobs" URL.
+You can fine-tune everything later by editing `config.yaml` on GitHub (open the file → ✏️ pencil → **Commit changes**). Every option is explained in `config.example.yaml`. Running Setup again starts over; the old config is kept as `config.yaml.bak-<date>`.
 
-**Telegram.**
-1. Talk to **@BotFather** and send `/newbot`. It gives you the bot token.
-2. Add the bot to your group and send any message there.
-3. Run `python telegram_notifier.py --setup` to print the chat id. If your group uses Topics, it also prints their ids, for one topic per category.
+### 4. Add your notification secrets
 
-### 2. Run the wizard
+**Settings → Secrets and variables → Actions → New repository secret.** Add one secret for each line below:
 
-```bash
-.venv/bin/python setup_wizard.py      # Windows: .venv\Scripts\python setup_wizard.py
-```
+| Secret name | Value | How to get it |
+|---|---|---|
+| `DISCORD_WEBHOOK_DEFAULT` | webhook URL | In your Discord server: **Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL**. Every job goes here unless its type has its own channel |
+| `DISCORD_WEBHOOK_<TYPE>` | webhook URL | Optional, one channel per job type. Use the names from the Setup summary, e.g. `DISCORD_WEBHOOK_BACKEND_DEVELOPER` |
+| `TELEGRAM_BOT_TOKEN` | bot token | Telegram → **@BotFather** → `/newbot` |
+| `TELEGRAM_CHAT_ID` | chat id | Add the bot to your group and send a message. Then open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `chat.id` |
 
-It walks through 6 short sections: job types, filters, your CV, sources, notifications and schedule. Then it writes:
+Secrets are encrypted by GitHub and never appear in files or logs.
 
-- **`config.yaml`** — all settings (safe to edit by hand; every option is documented in `config.example.yaml`)
-- **`.env`** — webhook URLs and the Telegram token (**secrets**)
-- **`state.json`, `apply_queue.json`** — empty files the scanner fills over time
-- **`cvs/<job type>/cv.pdf`** — the CVs you pointed it to
+### 5. Upload your CVs (optional)
 
-Run the wizard again any time to start over; your old files are backed up first.
+The apply queue tells you which CV to send for each job: `cvs/<job type>/cv.pdf`. On GitHub, use **Add file → Upload files**. For the file path, type `cvs/Backend Developer/` (your type's name), then drop the PDF and rename it `cv.pdf`.
 
-> **Never commit `config.yaml`, `.env`, `state.json`, `apply_queue.json` or `cvs/`** — they are personal and already in `.gitignore`.
+### 6. Test, then go live
 
-### 3. Test it
+1. **Actions → Scan → Run workflow → mode `dry-run`.** Open the run to see:
+   - how many jobs each source found and how many passed your filters
+   - the jobs that *would* be sent, with their scores
 
-```bash
-.venv/bin/python main.py --dry-run
-```
-
-This prints a table of how many jobs each source returned and how many passed your filters, followed by the jobs that *would* be sent with their match scores. Nothing is sent and nothing is saved.
-
-Tune `config.yaml` until the list looks right:
-- **Too many irrelevant jobs:** narrow the title words, add excluded words, or add gaps.
-- **Too few jobs:** add title words, search terms or locations, or raise the max experience.
-
-### 4. First real run
-
-The first run finds every job that is open right now, which can be hundreds. To avoid a flood:
-
-```bash
-.venv/bin/python main.py --mark-seen    # remember everything open now, send nothing
-```
-
-From now on `python main.py` sends only **new** jobs.
-
-If you'd rather get today's backlog once, skip `--mark-seen`. Messages are paced at 0.1 s apart, and Discord rate limits are handled automatically.
-
-### 5. Schedule it
-
-See the next section.
-
----
-
-## Scheduling (run it automatically)
-
-### Linux / macOS / Raspberry Pi (cron)
-
-```bash
-bash install.sh --cron
-```
-
-This asks for the hours and days (default Sun–Thu at 9, 12, 15 and 18) and adds this line to your crontab:
-
-```
-0 9,12,15,18 * * 0-4 cd /path/to/JobRadar && flock -n /tmp/jobradar.lock ./run_scan.sh >> scan.log 2>&1  # jobradar
-```
-
-- **Time zone.** Cron uses the machine's time zone. On a Pi, set it with `sudo timedatectl set-timezone Asia/Jerusalem` (or yours).
-- **macOS.** macOS has no `flock` (`brew install flock`, or remove `flock -n /tmp/jobradar.lock` from the line).
-- **Random start.** Scheduled scans start a random 0–N minutes after the hour (`scan_jitter_minutes`), so a site isn't hit at exactly the same second every time. Runs you start by hand begin right away.
-- **Auto-update.** `AUTO_UPDATE=1 ./run_scan.sh` pulls the latest code before each scan.
-- **Log.** `scan.log` in the project folder.
-
-### Windows (Task Scheduler)
-
-1. Open **Task Scheduler → Create Basic Task**, then choose a daily trigger at your first hour.
-2. Set the action to **Start a program**:
-   - Program: `C:\path\to\JobRadar\.venv\Scripts\python.exe`
-   - Arguments: `main.py`
-   - Start in: `C:\path\to\JobRadar`
-3. Open the task's **Properties → Triggers → Edit → Repeat task every 3 hours** for a duration of 12 hours.
+   Nothing is sent. If the list looks wrong, adjust `config.yaml`:
+   - **Too many irrelevant jobs:** narrow the title words, add exclude words or gaps.
+   - **Too few jobs:** add title words, search terms or locations.
+2. **Run with mode `mark-seen` once.** It remembers every job open right now without sending anything, so you don't get hundreds of messages at once.
+3. **Done.** The **Scan** workflow now runs by itself Sun–Thu, 4 times a day, and sends only **new** jobs.
 
 ---
 
 ## Using it day to day
 
-| Command | What it does |
-|---|---|
-| `python main.py` | Normal scan: send new jobs, update the apply queue |
-| `python main.py --dry-run` | Show what would be sent (nothing sent or saved) |
-| `python main.py --limit 5` | Send at most 5 jobs (testing) |
-| `python main.py --mark-seen` | Mark everything open now as seen, send nothing |
-| `python main.py --rescore` | Re-score all open jobs and rebuild the pending apply queue (after changing your skills) |
-| `python apply_queue.py` | List jobs waiting for you, best score first, with the CV to use |
-| `python apply_queue.py --all` | Every job, including applied / skipped |
-| `python setup_wizard.py` | Start the configuration over |
-| `python israeli_boards.py` | Quick test of AllJobs / JobMaster |
-| `python list_values.py` | Show Goozali's Field / Location values (for tuning filters) |
+Everything happens on GitHub:
 
-**The apply queue.** Every item in `apply_queue.json` has a `status`. After you apply (or decide not to), set it to `applied` / `skipped` / `failed` and add a `note`. Only `pending` items show up in `python apply_queue.py`.
+| I want to… | Do this |
+|---|---|
+| See the latest results | **Actions → Scan →** latest run. The summary shows the per-source report and the pending apply queue |
+| Run a scan now | **Actions → Scan → Run workflow → `scan`** |
+| Preview without sending | **Run workflow → `dry-run`** |
+| Re-score everything after changing skills | **Run workflow → `rescore`** |
+| Change filters, skills, sources, search terms | Edit `config.yaml` on GitHub. The next run uses it |
+| Mark a job as applied / skipped | Edit `apply_queue.json` on GitHub: change its `"status"` to `"applied"` / `"skipped"` (optionally add a `"note"`). Only `pending` jobs are listed |
+| Pause the scanner | **Actions → Scan → ⋯ → Disable workflow** |
+| Start the configuration over | **Actions → Setup → Run workflow** |
+
+**GitHub Actions minutes.** A scan takes about 5–15 minutes. Four scans a day, five days a week, is roughly 400–1,300 minutes a month. Private repositories get 2,000 free minutes a month on GitHub Free. If you get close to the limit, scan fewer times a day.
+
+---
+
+## Changing the schedule
+
+Edit `.github/workflows/scan.yml`, at the `cron:` line. Times are **UTC**:
+
+```yaml
+- cron: "0 7,10,13,16 * * 0-4"   # 9/12/15/18 Israel time in winter, 10/13/16/19 in summer; Sun–Thu
+```
+
+GitHub may start scheduled runs a few minutes late. That's normal, and it also spreads the load on the job sites. LinkedIn only runs at the hours listed in `config.yaml → sources.linkedin.run_hours`.
 
 ---
 
@@ -286,7 +224,42 @@ JobRadar is meant for **personal use at a low volume**:
 
 Many sites' terms of use restrict automated access. Respect them, keep the volume low, and don't use this to republish other sites' listings.
 
-If a source suddenly returns 0 jobs in the `--dry-run` report, it is probably blocking you. Scan it less often or turn it off for a while.
+If a source suddenly returns 0 jobs in the `dry-run` report, it is probably blocking you. Scan it less often or turn it off for a while.
+
+**Note for GitHub Actions:** scans run from GitHub's cloud servers, not from a home connection. Some sites (LinkedIn especially) block cloud server addresses more readily than home ones. If a source keeps failing on GitHub, turn it off, or [run locally](#run-locally-optional) on a home machine.
+
+---
+
+## Run locally (optional)
+
+You can also run JobRadar on your own computer or a Raspberry Pi instead of GitHub Actions:
+
+```bash
+git clone https://github.com/navehvag/JobRadar.git
+cd JobRadar
+bash install.sh            # Linux / macOS / Pi: venv + packages + terminal setup wizard
+                           # (bash install.sh --cron also schedules it with cron)
+.venv/bin/python main.py --dry-run
+```
+
+On Windows:
+
+```powershell
+py -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python setup_wizard.py
+.venv\Scripts\python main.py --dry-run
+```
+
+Locally, secrets go in a `.env` file (the wizard writes it for you) instead of GitHub Secrets.
+
+| Command | What it does |
+|---|---|
+| `python main.py` / `--dry-run` / `--mark-seen` / `--rescore` / `--limit 5` | Same modes as the Scan workflow |
+| `python apply_queue.py [--all]` | List the apply queue |
+| `python setup_wizard.py` | Interactive setup in the terminal |
+| `python israeli_boards.py` | Quick test of AllJobs / JobMaster |
+| `python telegram_notifier.py --setup` | Print your Telegram chat / topic ids |
 
 ---
 
@@ -294,13 +267,14 @@ If a source suddenly returns 0 jobs in the `--dry-run` report, it is probably bl
 
 | Problem | Fix |
 |---|---|
-| `config.yaml not found` | Run `python setup_wizard.py` |
-| A source shows 0 or an error in the report | Run that source alone (e.g. `python israeli_boards.py`). It may be temporarily blocking you or may have changed its layout |
-| `No webhook for field ...` | Add a URL for that job type, or set `DISCORD_WEBHOOK_DEFAULT` in `.env` |
-| Every score is 0 | Make sure `profile.skills` has entries. Make sure the jobs have descriptions (some sources only fill them for jobs that passed the filter) |
-| LinkedIn / Indeed skipped | `python-jobspy` isn't installed: `pip install python-jobspy` |
-| Too many messages on the first run | `python main.py --mark-seen` once, then run normally |
-| Cron runs but nothing happens | Check `scan.log`, and check the time zone with `timedatectl` |
+| Scan fails with `config.yaml not found` | Run **Actions → Setup** first |
+| Scan says "No Discord webhooks or Telegram chat configured" | Add the `DISCORD_WEBHOOK_DEFAULT` (or Telegram) secret. `dry-run` works without secrets |
+| A job type's channel gets nothing | Its secret is missing or misnamed: the names are in the Setup summary (`DISCORD_WEBHOOK_<TYPE>`). Until then its jobs go to the default webhook |
+| A source shows 0 or an error in the report | It may be blocking GitHub's servers (see the note under [Being a good citizen](#being-a-good-citizen)), or it changed its layout. Turn it off in `config.yaml → sources` |
+| Every score is 0 | `profile.skills` is empty, or the jobs have no description |
+| Too many messages on the first run | Run the Scan workflow once with mode `mark-seen` |
+| Scheduled runs stopped | GitHub pauses schedules in repositories with no activity for 60 days. **Actions → Scan → Enable workflow** |
+| "Save results" step failed | Check **Settings → Actions → General → Workflow permissions** is set to **Read and write** |
 
 ---
 
@@ -308,9 +282,12 @@ If a source suddenly returns 0 jobs in the `--dry-run` report, it is probably bl
 
 ```
 JobRadar/
-├── setup_wizard.py       # Interactive setup → config.yaml + .env
+├── .github/workflows/
+│   ├── setup.yml         # "Setup" form → config.yaml
+│   └── scan.yml          # "Scan": schedule + Run workflow (scan / dry-run / mark-seen / rescore)
+├── setup_wizard.py       # Terminal wizard, and --from-env for the Setup workflow
 ├── install.sh            # venv + packages + wizard (+ --cron)
-├── run_scan.sh           # What cron runs (optional AUTO_UPDATE=1 git pull)
+├── run_scan.sh           # What cron runs when running locally
 ├── main.py               # scrape → filter → dedup → score → notify → apply queue → state
 ├── sources.py            # Runs enabled sources (with timeouts), per-source report
 ├── goozali_scraper.py    # Goozali (Airtable)
