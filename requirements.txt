@@ -1,0 +1,5 @@
+requests
+pyyaml
+python-dotenv
+# Optional: Indeed / LinkedIn source (heavier — pulls pandas)
+python-jobspy

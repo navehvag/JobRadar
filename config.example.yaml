@@ -1,0 +1,775 @@
+goozali_url: "https://airtable.com/appwewqLk7iUY4azc/shrQBuWjXd0YgPqV6/tblnk93ouV3B2ce9b"
+
+# ------------------------------------------------------------------ sources
+# Turn any source on/off with `enabled`. A source that fails is logged and skipped.
+source_timeout_seconds: 420  # a source that takes longer is skipped for this run
+scan_jitter_minutes: 8       # cron scans start 0–8 min after the hour (not when run by hand)
+
+sources:
+  goozali: true
+
+  hiremetech:
+    enabled: true
+    posted_days: 30        # only jobs posted in the last N days (HireMe's q= matches TITLES only)
+    max_pages: 3           # x100 results per query
+    queries:
+      - "hardware"
+      - "electronics"
+      - "electrical"
+      - "embedded"
+      - "firmware"
+      - "fpga"
+      - "asic"
+      - "rf"
+      - "validation"
+      - "verification"
+      - "integration"
+      - "system engineer"
+      - "חומרה"
+      - "אלקטרוניקה"
+      - "אינטגרציה"
+      - "hardware engineer"
+      - "electrical engineer"
+      - "test engineer"
+      - "analog"
+      - "board"
+      - "lab"
+      - "bring-up"
+      - "integrator"
+      - "silicon"
+      - "חשמל"
+      - "בדיקות"
+
+  rafael: false            # site has anti-bot protection; Rafael jobs still arrive via LinkedIn/Goozali
+  iai: true                # includes Elta
+  elbit: true
+  mobileye: true
+
+  # Israeli boards (HTML search pages, parsed in israeli_boards.py). Hebrew queries work best.
+  # AllJobs: 30 jobs/page with full description. JobMaster: 10 jobs/page, full text fetched
+  # only for jobs that pass the filter.
+  alljobs:
+    enabled: true
+    max_pages: 2
+    queries: &israeli_queries
+      - "מהנדס חומרה"
+      - "מהנדס אלקטרוניקה"
+      - "מהנדס חשמל"
+      - "מהנדס מערכת"
+      - "אינטגרציה"
+      - "מהנדס בדיקות"
+      - "מהנדס RF"
+      - "אנטנות"
+      - "תכן כרטיסים"
+      - "embedded"
+      - "קושחה"
+      - "FPGA"
+      - "VLSI"
+      - "מהנדס מכירות"
+      - "מהנדס אפליקציה"
+      - "מנהל פרויקטים הנדסי"
+      - "hardware engineer"
+      - "electronics engineer"
+  jobmaster:
+    enabled: true
+    max_pages: 1             # guests only get page 1 (page 2+ needs login)
+    queries: *israeli_queries
+
+  # Amazon jobs in Israel (incl. Annapurna Labs chip design) — amazon.jobs public JSON
+  amazon: true
+
+  indeed:
+    enabled: true          # needs: pip install python-jobspy
+    sites: ["indeed"]
+    hours_old: 72
+    results_per_term: 50
+    search_terms:
+      - "hardware engineer"
+      - "electronics engineer"
+      - "embedded engineer"
+      - "firmware engineer"
+      - "validation engineer"
+      - "integration engineer"
+      - "system engineer"
+      - "FPGA engineer"
+
+  # LinkedIn public job search via python-jobspy (no login). Descriptions are fetched so jobs
+  # can be scored against the CV — slower, so fewer results per term. Duplicates of jobs already
+  # sent from Goozali etc. are dropped by company+title.
+  linkedin:
+    enabled: true
+    run_hours: [9, 15]      # only on the 9:00 and 15:00 scans (hours_old 72 still covers every job)
+    hours_old: 72
+    results_per_term: 25
+    search_terms:
+      - "hardware engineer"
+      - "electrical engineer"
+      - "electronics engineer"
+      - "integration engineer"
+      - "validation engineer"
+      - "system engineer hardware"
+      - "embedded engineer"
+      - "FPGA engineer"
+      - "test engineer electronics"
+
+  # Big companies on Workday — scraped directly (Israel jobs only where the site allows)
+  workday:
+    - name: "NVIDIA"
+      url: "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite"
+    - name: "Intel"
+      url: "https://intel.wd1.myworkdayjobs.com/External"
+    - name: "Applied Materials"
+      url: "https://amat.wd1.myworkdayjobs.com/External"
+    - name: "Marvell"
+      url: "https://marvell.wd1.myworkdayjobs.com/MarvellCareers"
+      max_pages: 20
+    - name: "KLA"
+      url: "https://kla.wd1.myworkdayjobs.com/Search"
+      max_pages: 60
+    - name: "Broadcom"
+      url: "https://broadcom.wd1.myworkdayjobs.com/External_Career"
+      max_pages: 20
+    - name: "NXP"                      # Yokneam (MCU / SoC design)
+      url: "https://nxp.wd3.myworkdayjobs.com/careers"
+      max_pages: 20
+    - name: "GE HealthCare"            # Haifa / Rehovot
+      url: "https://gehc.wd5.myworkdayjobs.com/GEHC_ExternalSite"
+      max_pages: 20
+    - name: "Motorola Solutions"       # Tel Aviv / Ra'anana
+      url: "https://motorolasolutions.wd5.myworkdayjobs.com/Careers"
+      max_pages: 20
+    - name: "HP Indigo"                # Ness Ziona / Kiryat Gat
+      url: "https://hp.wd5.myworkdayjobs.com/ExternalCareerSite"
+      max_pages: 20
+    - name: "Philips"                  # Haifa (imaging HW / FPGA / board design)
+      url: "https://philips.wd3.myworkdayjobs.com/jobs-and-careers"
+      max_pages: 20
+
+# ------------------------------------------------------------------ filter
+filter:
+  max_experience_years: 4
+  max_age_days: 30           # skip jobs posted more than N days ago (sources that give a date)
+
+  # Source fields that are never relevant (Goozali's "Field" values etc.)
+  exclude_fields:
+    - "IT and System Administration"
+    - "DevOps"
+    - "Cybersecurity"
+    - "Data Science, ML & Algorithms"
+    - "Data Analytics & BI"
+    - "Data Analyst"
+    - "Data Engineering"
+    - "Frontend Development"
+    - "Mobile Development"
+    - "Product Management"
+    - "UI/UX, Design & Content"
+    - "Finance"
+    - "Sales"
+    - "Marketing"
+    - "Business Development"
+    - "Customer Success"
+    - "HR & Recruitment"
+    - "Compliance, Legal & Policy"
+    - "Operations"
+    - "C-Level"
+    - "Natural Science"
+
+  # Job categories. A job joins a category if ANY of these holds:
+  #   - its source Field/department is listed under source_fields (exact match)
+  #   - its title contains one of title_keywords (whole word, case-insensitive)
+  #   - its Field was already mapped to this category name (via department_mapping)
+  # A job that matches several categories goes to the FIRST one in this list.
+  # Each category gets its own Discord channel / Telegram topic.
+  categories:
+    # matches the "Sales Engineer" CV folder
+    "Sales & Application Engineering":
+      source_fields: ["Solutions & Sales Engineering"]
+      title_keywords:
+        - "sales engineer"
+        - "pre-sales"
+        - "presales"
+        - "pre sales"
+        - "technical sales"
+        - "field application engineer"
+        - "fae"
+        - "application engineer"
+        - "applications engineer"
+        - "solutions engineer"
+        - "solution engineer"
+        - "customer engineer"
+        - "field engineer"
+        - "מהנדס מכירות"
+        - "מהנדס/ת מכירות"
+        - "מהנדס אפליקציה"
+        - "מהנדס/ת אפליקציה"
+
+    # matches the "Project management" CV folder
+    "Project Management":
+      source_fields: ["Project Management"]
+      exclude_title_keywords: ["construction", "בנייה", "בניה", "marketing", "שיווק", "digital", "it", "software", "תוכנה"]
+      title_keywords:
+        - "project manager"
+        - "project engineer"
+        - "technical project"
+        - "program manager"
+        - "project management"
+        - "מנהל פרויקט"
+        - "מנהל פרויקטים"
+        - "מנהל/ת פרויקט"
+        - "מנהל/ת פרויקטים"
+        - "מהנדס פרויקט"
+        - "מהנדס/ת פרויקט"
+        - "מהנדס/ת פרויקטים"
+
+    "Embedded & Firmware":
+      source_fields: ["Embedded", "Firmware", "Embedded Software", "Embedded, Low Level & Firmware Engineering"]
+      title_keywords:
+        - "embedded"
+        - "firmware"
+        - "fw"
+        - "bsp"
+        - "rtos"
+        - "device driver"
+        - "drivers"
+        - "kernel"
+        - "low level"
+        - "low-level"
+        - "real time"
+        - "real-time"
+        - "rt"
+        - "משובץ"
+        - "משובצות"
+        - "קושחה"
+        - "זמן אמת"
+
+    "Validation & Verification":
+      source_fields: ["Validation", "Verification"]
+      title_keywords:
+        - "validation"
+        - "verification"
+        - "v&v"
+        - "post-silicon"
+        - "post silicon"
+        - "hw test"
+        - "hardware test"
+        - "test engineer"
+        - "ולידציה"
+        - "וריפיקציה"
+        - "אימות"
+        - "בדיקות מערכת"
+
+    "Hardware & Electrical":
+      source_fields:
+        - "Hardware"
+        - "Hardware Engineering"
+        - "Hardware & Electronics"
+        - "Electrical"
+        - "Electrical Engineering"
+        - "אלקטרוניקה"
+      title_keywords:
+        - "hardware"
+        - "hw"
+        - "electrical"
+        - "electronics"
+        - "electronic"
+        - "board design"
+        - "board"
+        - "pcb"
+        - "analog"
+        - "mixed signal"
+        - "digital design"
+        - "rf"
+        - "microwave"
+        - "antenna"
+        - "power electronics"
+        - "fpga"
+        - "asic"
+        - "vlsi"
+        - "soc design"
+        - "circuit"
+        - "chip design"
+        - "physical design"
+        - "חומרה"
+        - "אלקטרוניקה"
+        - "חשמל"
+        - "מיקרוגל"
+        - "אנטנות"
+        - "אנלוגי"
+        - "מעגלים"
+
+    "Integration & System":
+      # software/IT "integration" jobs are not what we want here
+      exclude_fields: ["Software Engineering", "QA"]
+      exclude_title_keywords:
+        - "developer"
+        - "מפתח"
+        - "מפתחת"
+        - "מפתח/ת"
+        - "מפתח.ת"
+        - "fhir"
+        - "glue"
+        - "c++"
+        - "neural"
+        - "business systems"
+        - "configuration management"
+        - "ניהול מידע הנדסי"
+        - "structural"
+      source_fields: ["הנדסת מערכת", "System Engineering", "Systems Engineering", "Integration"]   # Goozali: "Systems Engineering"
+      title_keywords:
+        - "integration"
+        - "integrator"
+        - "system engineer"
+        - "systems engineer"
+        - "system engineering"
+        - "systems engineering"
+        - "אינטגרציה"
+        - "אינטגרטור"
+        - "הנדסת מערכת"
+        - "מהנדס מערכת"
+        - "מהנדסת מערכת"
+        - "מהנדס/ת מערכת"
+        - "מהנדס.ת מערכת"
+
+  # Substring match, case-insensitive. A job with no location passes.
+  locations:
+    # Center / Gush Dan
+    - "Tel Aviv"
+    - "Tel-Aviv"
+    - "Petach Tikva"
+    - "Petah Tikva"
+    - "Petah Tiqva"
+    - "Ramat Gan"
+    - "Givatayim"
+    - "Bnei Brak"
+    - "Holon"
+    - "Bat Yam"
+    - "Rishon"
+    - "Rehovot"
+    - "Ness Ziona"
+    - "Nes Ziona"
+    - "Lod"
+    - "Ramla"
+    - "Yavne"
+    - "Airport City"
+    - "Yehud"
+    - "Or Yehuda"
+    - "Kiryat Ono"
+    - "Modiin"
+    - "Modi'in"
+    - "Center District"
+    - "Central region"
+    - "Tel Aviv and Center"
+    - "Tel Aviv District"
+    - "Israel - Central"
+    - "Center"
+    - "Shfela"
+    - "תל אביב"
+    - "ת\"א"
+    - "גבעתיים"
+    - "רמת גן"
+    - "פתח תקווה"
+    - "פתח תקוה"
+    - "חולון"
+    - "ראשון לציון"
+    - "תל השומר"
+    - "רחובות"
+    - "נס ציונה"
+    - "יהוד"
+    - "נתב\"ג"
+    - "באר יעקב"
+    - "לוד"
+    - "מודיעין"
+    - "גוש דן"
+    - "מרכז"
+    # Sharon
+    - "Herzliya"
+    - "Herzlia"
+    - "Ra'anana"
+    - "Raanana"
+    - "Kfar Saba"
+    - "Hod Hasharon"
+    - "Ramat Hasharon"
+    - "Netanya"
+    - "Even Yehuda"
+    - "Kadima"
+    - "Tzur Yigal"
+    - "Sharon"
+    - "הרצליה"
+    - "רעננה"
+    - "כפר סבא"
+    - "הוד השרון"
+    - "רמת השרון"
+    - "נתניה"
+    - "שרון"
+    # Jerusalem / Samaria
+    - "Jerusalem"
+    - "Ariel"
+    - "Rosh HaAyin"
+    - "Rosh Ha'Ayin"
+    - "Rosh Haayin"
+    - "Barkan"
+    - "Elad"
+    - "Beit Shemesh"
+    - "Mevaseret"
+    - "ירושלים"
+    - "אריאל"
+    - "ראש העין"
+    - "ברקן"
+    - "בית שמש"
+    # Elta (IAI) is in Ashdod — remove these two lines to drop it
+    - "Ashdod"
+    - "אשדוד"
+
+  # Phrases removed from the title before the exclusion check below, so "Sales Engineer" and
+  # "Project Manager" pass although "sales" / "manager" are excluded ("Senior Sales Engineer" still fails).
+  allow_title_keywords:
+    - "sales engineer"
+    - "pre-sales"
+    - "presales"
+    - "pre sales"
+    - "technical sales"
+    - "project manager"
+    - "program manager"
+    - "project management"
+    - "מנהל פרויקט"
+    - "מנהל פרויקטים"
+    - "מנהל/ת פרויקט"
+    - "מנהל/ת פרויקטים"
+    - "מהנדס מכירות"
+    - "מהנדס/ת מכירות"
+
+  # Keep only junior / mid level: drop anything above mid, and student/intern roles.
+  # Matched as whole words, case-insensitive.
+  exclude_title_keywords:
+    - "senior"
+    - "sr"
+    - "lead"
+    - "leader"
+    - "staff"
+    - "principal"
+    - "manager"
+    - "director"
+    - "vp"
+    - "head of"
+    - "chief"
+    - "architect"
+    - "expert"
+    - "fellow"
+    - "student"
+    - "intern"
+    - "internship"
+    - "בכיר"
+    - "בכירה"
+    - "ראש צוות"
+    - "ראש תחום"
+    - "ראש מחלקה"
+    - "מנהל"
+    - "מנהלת"
+    - "מוביל"
+    - "מובילה"
+    - "מומחה"
+    - "מומחית"
+    - "ארכיטקט"
+    - "סטודנט"
+    - "סטודנטית"
+    - "experienced"
+    - "מנוסה"
+    - "מנוסה/ת"
+    # senior roles written with Hebrew gender slashes
+    - "ראש/ת"
+    - "ראש.ת"
+    - "ראשי"
+    - "ראשי/ת"
+    - "ראשית"
+    - "leade"
+    # not engineering roles
+    - "practical engineer"
+    - "technologist"
+    - "instructor"
+    - "מדריך"
+    - "copilot"
+    - "product specialist"
+    - "operation specialist"
+    - "וידיאו"
+    - "רכש"
+    - "מפקח"
+    - "מפקח/ת"
+    - "משפצ"
+    - "משפצ/ת"
+    - "מבקר"
+    - "מבקר/ת"
+    - "איש/ת soc"
+    - "soc analyst"
+    - "mechanical"
+    - "מכונות"
+    - "מכני"
+    - "מכנית"
+    - "technician"
+    - "טכנאי"
+    - "טכנאית"
+    - "buyer"
+    - "procurement"
+    - "pilot"
+    - "sales"
+    - "account"
+    - "recruiter"
+    # software / IT integration — not hardware
+    - "devops"
+    - "cloud"
+    - "salesforce"
+    - "sap"
+    - "crm"
+    - "erp"
+    - "saas"
+    - "api"
+    - "web"
+    - "backend"
+    - "frontend"
+    - "full stack"
+    - "fullstack"
+    - "data engineer"
+    - "implementation"
+    - "it"
+
+# Source department name -> category name (applies to every source)
+department_mapping:
+  "Hardware": "Hardware & Electrical"
+  "Hardware Engineering": "Hardware & Electrical"
+  "Electrical Engineering": "Hardware & Electrical"
+  "Embedded": "Embedded & Firmware"
+  "Firmware": "Embedded & Firmware"
+  "Validation": "Validation & Verification"
+  "Verification": "Validation & Verification"
+  "System Engineering": "Integration & System"
+  "Systems Engineering": "Integration & System"
+  "Integration": "Integration & System"
+  # Add more mappings as you discover new department names during testing
+
+# Extra companies scraped directly from Greenhouse / Lever / Comeet.
+# Use `py company_finder.py --from-goozali` to discover candidates. Format:
+#   - name: "Company"
+#     platform: "greenhouse"      # or "lever"
+#     token: "companytoken"
+#   - name: "Company"
+#     platform: "comeet"
+#     slug: "companyslug"         # from comeet.com/jobs/{slug}/{uid}
+#     uid: "41.00B"
+companies:
+  - name: "Electreon"
+    platform: "greenhouse"
+    token: "electreon"
+
+# ------------------------------------------------------------------ notifications
+discord:
+  enabled: true
+  # Default-type (Hardware Engineer CV) jobs in these categories go to the category channel
+  # (#integration-validation) instead of #hardware-engineer
+  keep_category_channels: ["Integration & System", "Validation & Verification"]
+
+# job type (CV folder) -> env var with that type's channel webhook (one channel per type)
+discord_type_webhooks:
+  "Hardware Engineer": "DISCORD_WEBHOOK_HARDWARE"            # #hardware-engineer
+  "Embedded": "DISCORD_WEBHOOK_EMBEDDED"                     # #embedded
+  "Chip Design & Verification": "DISCORD_WEBHOOK_VALIDATION" # #chip-design-verification (was #validation)
+  "Antenna Engineer": "DISCORD_WEBHOOK_ANTENNA"              # #antenna-engineer
+  "Board design": "DISCORD_WEBHOOK_BOARD"                    # #board-design
+  "Firmware Engineer": "DISCORD_WEBHOOK_FIRMWARE"            # #firmware-engineer
+  "Project management": "DISCORD_WEBHOOK_PM"                 # #project-management
+  "Sales Engineer": "DISCORD_WEBHOOK_SALES"                  # #sales-engineer
+
+# category name -> env var holding that category's Discord webhook URL (one channel each)
+discord_webhooks:
+  "Sales & Application Engineering": "DISCORD_WEBHOOK_INTEGRATION"   # no own channel yet
+  "Project Management": "DISCORD_WEBHOOK_INTEGRATION"
+  "Embedded & Firmware": "DISCORD_WEBHOOK_EMBEDDED"
+  "Validation & Verification": "DISCORD_WEBHOOK_INTEGRATION"   # #integration-validation
+  "Hardware & Electrical": "DISCORD_WEBHOOK_HARDWARE"
+  "Integration & System": "DISCORD_WEBHOOK_INTEGRATION"        # #integration-validation
+
+telegram:
+  enabled: true
+  bot_token_env: "TELEGRAM_BOT_TOKEN"
+  chat_id_env: "TELEGRAM_CHAT_ID"       # default chat — everything goes here unless routed below
+  # Option A: one group with Topics — category -> topic id (from `py telegram_notifier.py --setup`)
+  topics:
+    "Embedded & Firmware": 0
+    "Validation & Verification": 0
+    "Hardware & Electrical": 0
+    "Integration & System": 0
+  # Option B: separate chat per category — category -> env var with that chat id
+  chats: {}
+
+# ------------------------------------------------------------------ CV match score
+# How much of what a job asks for does the CV cover?  (see matcher.py)
+#   fit = have / (have + gaps), x evidence, x experience penalty, +10% for junior wording
+# "skills" = what YOUR CV actually shows. "gaps" = common requirements your CV does NOT show.
+# The values below are an EXAMPLE (an electrical-engineering graduate) — replace them with yours,
+# or let `python setup_wizard.py` build them from the keywords you enter.
+# If you really know a "gap" skill, add it to your CV and move it to "skills".
+profile:
+  experience_years: 1.5      # your years of industry experience
+  penalty_per_year: 0.22     # score drops 22% per required year beyond experience_years + 0.5
+  min_evidence: 10           # minimum matched weight for a full score
+  highlight_score: 60        # ⭐ in alerts at or above this score
+  apply_score: 60            # jobs at or above this go to apply_queue.json for review
+
+  skills:
+    # RF / analog
+    "rf": {weight: 4, aliases: ["radio frequency", "microwave", "rf design", "מיקרוגל"]}
+    "antenna": {weight: 3, aliases: ["antennas", "אנטנה", "אנטנות"]}
+    "analog": {weight: 4, aliases: ["analogue", "analog design", "mixed signal", "mixed-signal", "אנלוגי", "אנלוגיים"]}
+    "ads/cst": {weight: 2, aliases: ["ads", "cst", "hfss", "keysight ads"]}
+    # digital design
+    "systemverilog": {weight: 4, aliases: ["system verilog", "verilog", "rtl"]}
+    "digital design": {weight: 3, aliases: ["logic design", "digital logic", "תכן לוגי"]}
+    "risc-v": {weight: 3, aliases: ["riscv", "processor design", "cpu design"]}
+    "fpga": {weight: 3, aliases: ["vivado", "xilinx"]}
+    # integration / validation
+    "system integration": {weight: 4, aliases: ["hw/sw integration", "e2e integration", "integration engineer", "integrator", "שילובים"]}
+    "integration": {weight: 1, aliases: ["אינטגרציה"]}
+    "validation": {weight: 3, aliases: ["system validation", "hardware validation", "v&v", "ולידציה"]}
+    "verification": {weight: 1, aliases: ["וריפיקציה"]}
+    "test automation": {weight: 3, aliases: ["automation", "automated testing", "test scripts", "test setups", "אוטומציה"]}
+    "servers": {weight: 2, aliases: ["server", "rack", "data center", "datacenter", "deployment"]}
+    # hands-on hardware
+    "bring-up": {weight: 3, aliases: ["bring up", "bringup", "board bring-up"]}
+    "lab": {weight: 3, aliases: ["oscilloscope", "oscilloscopes", "spectrum analyzer", "lab equipment", "lab tools", "scopes", "מעבדה"]}
+    "schematics": {weight: 3, aliases: ["schematic", "circuit analysis", "circuit design", "סכמות", "סכמה"]}
+    "troubleshooting": {weight: 2, aliases: ["debugging", "debug", "board-level", "תקלות"]}
+    "kicad/multisim": {weight: 1, aliases: ["kicad", "multisim"]}
+    # general
+    "communication systems": {weight: 2, aliases: ["communications", "communication", "wireless", "תקשורת"]}
+    "python": {weight: 2, aliases: ["scripting"]}
+    "c/c++": {weight: 1, aliases: ["c++", "embedded c"]}
+    "matlab": {weight: 1, aliases: ["simulink"]}
+    "hardware": {weight: 1, aliases: ["hw", "electronics", "חומרה", "אלקטרוניקה"]}
+    "b.sc ee": {weight: 2, aliases: ["electrical engineering", "electronics engineering", "electrical and electronics", "הנדסת חשמל", "הנדסת אלקטרוניקה"]}
+
+  gaps:
+    "si/pi": {weight: 3, aliases: ["signal integrity", "power integrity", "timing analysis", "si simulation", "pi simulation"]}
+    "high-speed interfaces": {weight: 3, aliases: ["pcie", "ddr", "mipi", "serdes", "gmsl", "fpd-link", "high speed", "high-speed", "usb 3", "usb3"]}
+    "uvm": {weight: 3, aliases: ["universal verification methodology"]}
+    "asic flow": {weight: 3, aliases: ["physical design", "place and route", "static timing", "sta", "dft", "synthesis", "cadence", "synopsys", "innovus", "primetime"]}
+    "board design": {weight: 3, aliases: ["board designer", "board design", "pcb design", "pcba", "designing boards", "תכן כרטיסים", "פיתוח כרטיסים"]}
+    "pcb tools": {weight: 2, aliases: ["altium", "orcad", "allegro", "xpedition", "presto"]}
+    "microcontrollers": {weight: 2, aliases: ["stm32", "pic", "microcontroller", "microcontrollers", "mcu", "arm cortex"]}
+    "firmware/embedded linux": {weight: 3, aliases: ["firmware", "linux kernel", "device driver", "device drivers", "drivers", "bsp", "yocto", "embedded linux", "rtos", "קושחה"]}
+    "low-speed protocols": {weight: 1, aliases: ["spi", "i2c", "uart", "can", "can bus", "rs232", "rs422", "rs485"]}
+    "networking": {weight: 1, aliases: ["ethernet", "tcp/ip", "networking"]}
+    "power electronics": {weight: 2, aliases: ["power supply design", "dc-dc", "dc/dc", "power management", "power electronics"]}
+    "automotive": {weight: 1, aliases: ["adas", "autonomous driving", "av platforms"]}
+    "ml/vision": {weight: 2, aliases: ["computer vision", "deep learning", "machine learning", "image processing", "neural network"]}
+    "software stack": {weight: 2, aliases: ["java", "c#", ".net", "javascript", "kubernetes", "docker", "aws", "azure", "cloud"]}
+    "advanced degree": {weight: 3, aliases: ["phd", "ph.d", "m.sc required", "msc required", "דוקטורט"]}
+    "mechanical": {weight: 3, aliases: ["solidworks", "מכונות", "mechanical design"]}
+    "labview": {weight: 1, aliases: ["teststand"]}
+
+# ------------------------------------------------------------------ job types = CV folders
+# Each folder in cvs/ is a job type with its own CV. A job gets the FIRST type whose
+# title_keywords match its title (else the `default` type), is scored against base `profile`
+# skills + that type's `skills` (only what that CV really shows), and the queue records which
+# CV to attach. `covers`: gaps (by name, or a single gap alias) that this type's CV does show.
+# A new folder in cvs/ needs an entry here (cv defaults to "cvs/<name>/cv.pdf").
+job_types:
+  "Sales Engineer":
+    title_keywords: ["sales engineer", "pre-sales", "presales", "pre sales", "technical sales",
+                     "field application engineer", "fae", "application engineer", "applications engineer",
+                     "solutions engineer", "solution engineer", "customer engineer", "field engineer",
+                     "support engineer", "customer support", "מהנדס מכירות", "מהנדס/ת מכירות",
+                     "מהנדס אפליקציה", "מהנדס/ת אפליקציה", "תמיכה טכנית"]
+    skills:
+      "customer support": {weight: 3, aliases: ["customer", "customers", "customer-facing", "technical support", "field", "on-site", "onsite", "לקוחות", "תמיכה"]}
+      "demonstrations": {weight: 2, aliases: ["demo", "demos", "presentations", "training", "trainings", "הדרכות", "הדרכה"]}
+      "networking": {weight: 2, aliases: ["tcp/ip", "ip networks", "networking", "ethernet"]}
+      "linux": {weight: 1, aliases: ["linux fundamentals"]}
+      "rf measurements": {weight: 2, aliases: ["signal generator", "signal generators", "rf measurements"]}
+      "radios/modems": {weight: 2, aliases: ["ip radio", "ip radios", "radios", "modem", "modems"]}
+    covers: ["networking"]
+    # hardware / RF / defense products only — not SaaS or cyber pre-sales
+    require_context: &eng_context ["hardware", "electrical", "electronics", "electronic", "electric", "electro-optics",
+                      "electro-optical", "rf", "radar", "antenna", "communication systems", "satellite",
+                      "defense", "defence", "aerospace", "avionics", "aircraft", "uav", "drone", "drones",
+                      "loitering", "missile", "interceptor", "laser", "lasers", "optics", "energy", "bess",
+                      "battery", "batteries", "power systems", "semiconductor", "chip", "manufacturing",
+                      "production line", "integration", "system engineering", "systems engineering",
+                      "railway", "electrification", "robotics", "mechatronics", "embedded", "firmware",
+                      "חשמל", "חשמול", "חשמלי", "אלקטרוניקה", "אלקטרוני", "ביטחון", "ביטחוני", "ביטחונית",
+                      "מערכות הגנה", "מיירטים", "טילים", "משוטטים", "מטוסים", "מנועים", "תעופה", "מכ\"ם",
+                      "אנטנות", "תקשורת", "לוויין", "לייזר", "אנרגיה", "אגירה", "ייצור", "אינטגרציה",
+                      "הנדסת מערכת", "רכבת", "רכבתי", "רובוטיקה", "מהנדס חשמל", "הנדסת חשמל", "הנדסי",
+                      "iai", "elta", "elbit", "rafael", "אלביט", "רפאל", "התעשייה האווירית"]
+    missing_context_factor: 0
+    gaps:
+      "sales track record": {weight: 2, aliases: ["quota", "sales cycle", "business development"]}
+
+  "Project management":
+    title_keywords: ["project manager", "project engineer", "technical project", "program manager",
+                     "project management", "מנהל פרויקט", "מנהל פרויקטים", "מנהל/ת פרויקט",
+                     "מנהל/ת פרויקטים", "מהנדס פרויקט", "מהנדס/ת פרויקט", "מהנדס/ת פרויקטים",
+                     "ניהול פרויקט", "ניהול פרויקטים"]
+    skills:
+      "project management": {weight: 4, aliases: ["project manager", "project engineer", "projects", "ניהול פרויקט", "ניהול פרויקטים", "מנהל פרויקט"]}
+      "planning": {weight: 2, aliases: ["operational planning", "milestones", "schedule", "schedules", "timelines", "work plan", "תכנון", "לוחות זמנים"]}
+      "vendor relations": {weight: 2, aliases: ["vendor", "vendors", "suppliers", "subcontractors", "ספקים", "קבלני משנה"]}
+      "budget": {weight: 1, aliases: ["budgets", "resource allocation", "תקציב"]}
+      "coordination": {weight: 2, aliases: ["cross-functional", "cross functional", "stakeholders", "stakeholder", "interfaces", "ממשקים"]}
+      "quality control": {weight: 1, aliases: ["quality", "בקרת איכות"]}
+    # Only engineering projects: the job must mention one of these somewhere, else score x0
+    require_context: *eng_context
+    missing_context_factor: 0
+    gaps:
+      "pm certification": {weight: 2, aliases: ["pmp", "prince2"]}
+      "pm tools": {weight: 1, aliases: ["ms project", "microsoft project", "primavera"]}
+      # IT / software / business projects — not what this example CV is for
+      "non-engineering projects": {weight: 6, aliases: ["information systems", "it projects", "erp", "crm", "saas",
+                                    "data", "bi", "ai", "marketing", "digital", "software projects",
+                                    "software development", "cloud", "cyber", "security operations",
+                                    "languages", "construction", "בינוי", "מערכות מידע", "דאטה", "שיווק"]}
+
+  "Antenna Engineer":
+    title_keywords: ["antenna", "antennas", "rf", "microwave", "mmwave", "radar", "rf engineer",
+                     "אנטנה", "אנטנות", "מיקרוגל", "מכ\"ם"]
+
+  "Chip Design & Verification":
+    title_keywords: ["asic", "vlsi", "chip", "rtl", "soc", "fpga", "design verification", "dv",
+                     "physical design", "silicon", "post-silicon", "post silicon", "pre-silicon",
+                     "dft", "emulation", "logic design", "digital design", "וריפיקציה", "תכן לוגי"]
+
+  "Firmware Engineer":
+    title_keywords: ["firmware", "fw", "bsp", "bios", "uefi", "low level", "low-level", "kernel",
+                     "device driver", "drivers", "קושחה"]
+    skills:
+      "firmware": {weight: 3, aliases: ["fw", "low-level", "low level", "קושחה"]}
+      "embedded systems": {weight: 2, aliases: ["embedded", "embedded system"]}
+      "computer architecture": {weight: 3, aliases: ["micro-architecture", "microarchitecture", "cpu architecture"]}
+      "linux": {weight: 2, aliases: []}
+      "dsp": {weight: 1, aliases: ["digital signal processing"]}
+    covers: ["firmware", "קושחה"]
+
+  "Embedded":
+    title_keywords: ["embedded", "iot", "microcontroller", "mcu", "rtos", "real time", "real-time",
+                     "משובץ", "משובצות", "זמן אמת"]
+    skills:
+      "embedded systems": {weight: 3, aliases: ["embedded", "embedded system"]}
+      "microcontrollers": {weight: 2, aliases: ["microcontroller", "mcu", "mcus"]}
+      "pcb design": {weight: 2, aliases: ["pcb", "pcb prototyping"]}
+      "dsp": {weight: 2, aliases: ["digital signal processing"]}
+      "iot": {weight: 1, aliases: ["internet of things"]}
+      "sensors": {weight: 1, aliases: ["sensor", "data acquisition", "lidar"]}
+      "low power": {weight: 1, aliases: ["low-power", "low power design"]}
+    covers: ["microcontrollers", "pcb design", "pcba"]
+
+  "Board design":
+    title_keywords: ["board design", "board designer", "pcb", "board", "layout", "signal integrity",
+                     "power integrity", "si/pi", "תכן כרטיסים", "כרטיסים", "כרטיס"]
+    skills:
+      "si/pi": {weight: 3, aliases: ["signal integrity", "power integrity", "si simulation", "pi simulation"]}
+      "board design": {weight: 3, aliases: ["board designer", "pcb design", "designing boards", "תכן כרטיסים", "פיתוח כרטיסים"]}
+      "orcad": {weight: 1, aliases: []}
+    covers: ["si/pi", "board design", "orcad"]
+
+  # Hardware / integration / validation jobs and everything else -> the general CV
+  "Hardware Engineer":
+    default: true
+    title_keywords: ["hardware", "hw", "electronics", "electrical", "analog", "circuit", "חומרה",
+                     "אלקטרוניקה", "חשמל"]
