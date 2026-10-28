@@ -19,6 +19,13 @@ from datetime import datetime
 import yaml
 
 EXAMPLE = "config.example.yaml"
+
+SENIORITY_WORDS = [
+    "senior", "sr", "lead", "leader", "staff", "principal", "manager", "director", "vp", "head of",
+    "chief", "architect", "expert", "fellow", "student", "intern", "internship", "experienced",
+    "בכיר", "בכירה", "ראש צוות", "ראש תחום", "ראש מחלקה", "מנהל", "מנהלת", "מוביל", "מובילה",
+    "מומחה", "מומחית", "ארכיטקט", "סטודנט", "סטודנטית", "מנוסה", "ראש/ת", "ראש.ת",
+]
 CONFIG = "config.yaml"
 ENV = ".env"
 
@@ -141,8 +148,11 @@ def main() -> None:
     print("\nLocations: a job passes if its location CONTAINS one of these words (case-insensitive).\n"
           "Leave empty to accept every location. Jobs without a location always pass.")
     flt["locations"] = ask_list("Locations (e.g. Tel Aviv, Herzliya, Remote)", [])
-    keep_seniority = ask_yes("Hide senior / lead / manager / architect / student / intern roles?", True)
-    default_excludes = flt.get("exclude_title_keywords") or []
+    keep_seniority = ask_yes("Hide senior / lead / manager / architect / student / intern roles?\n"
+                             "  (say n if you ARE looking for senior or management roles)", True)
+    # Only the seniority / student words — the example config also hides field-specific words
+    # (sales, it, backend, web, ...) that would wrongly hide jobs in other fields.
+    default_excludes = SENIORITY_WORDS[:]
     if not keep_seniority:
         default_excludes = []
     extra = ask_list("Extra words that should HIDE a job when they appear in its title (optional)", [])
