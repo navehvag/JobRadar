@@ -46,6 +46,12 @@ jobs:
             exit 1
           fi
 
+      - name: Telegram commands ("submitted")
+        if: env.MODE == 'scan'
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: python telegram_commands.py || echo "telegram commands skipped"
+
       - name: Run (${{ env.MODE }})
         env:
           ALL_SECRETS: ${{ toJSON(secrets) }}
@@ -58,6 +64,20 @@ jobs:
             rescore)   python main.py --rescore ;;
           esac 2>&1 | tee scan-output.txt
           exit "${PIPESTATUS[0]}"
+
+      - name: Auto-submit (only if auto_submit.enabled in config.yaml)
+        if: env.MODE == 'scan'
+        timeout-minutes: 25
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+          TZ: Asia/Jerusalem
+        run: |
+          if python -c "import yaml,sys; c=yaml.safe_load(open('config.yaml')) or {}; sys.exit(0 if (c.get('auto_submit') or {}).get('enabled') else 1)"; then
+            pip install -q --prefer-binary -r requirements-autofill.txt
+            python autosubmit.py 2>&1 | tee -a scan-output.txt || echo "::warning::auto-submit failed"
+          else
+            echo "auto_submit is off (config.yaml)"
+          fi
 
       - name: Summary
         if: always()
@@ -75,14 +95,19 @@ jobs:
 
       - name: Save results
         if: env.MODE != 'dry-run'
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
         run: |
           git config user.name "jobradar-bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add state.json apply_queue.json
+          [ -f scan_log.json ] && git add scan_log.json
           if git diff --cached --quiet; then echo "nothing to save"; exit 0; fi
           git commit -qm "Scan results $(TZ=Asia/Jerusalem date '+%F %H:%M') [$MODE]"
           for i in 1 2 3; do
             git pull -q --rebase && git push -q && exit 0
             sleep 5
           done
-          echo "::error::could not push results"; exit 1
+          echo "::error::could not push results"
+          python notify_admin.py "⚠️ JobRadar scanned but couldn't save the results to GitHub — see the Actions log." || true
+          exit 1

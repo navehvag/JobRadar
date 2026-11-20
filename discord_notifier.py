@@ -75,7 +75,43 @@ def build_embed(job: dict) -> dict:
     return embed
 
 
-def send_to_discord(webhook_url: str, embed: dict) -> bool:
+def route(webhook_map: dict, job: dict) -> str | None:
+    """Webhook URL for a job: its job type's channel (CV folder), except default-type jobs in
+    categories that keep their own channel (integration / validation roles get the general CV
+    but their own channel); else the category channel; else the catch-all "*"."""
+    field = job.get("Category") or job.get("Field") or ""
+    keep_category = set(webhook_map.get("_keep_category") or [])
+    type_url = webhook_map.get(f"type:{job.get('Job Type')}")
+    if type_url and not (job.get("Default Type") and field in keep_category):
+        return type_url
+    return webhook_map.get(field) or webhook_map.get("*")
+
+
+def channels(webhook_map: dict) -> list[str]:
+    """Every distinct channel URL (several categories can share one channel)."""
+    return list(dict.fromkeys(v for k, v in webhook_map.items() if isinstance(v, str) and not k.startswith("_")))
+
+
+def send_text(webhook_url: str, text: str) -> bool:
+    return send_to_discord(webhook_url, None, content=text[:1990])
+
+
+def notify_summary(webhook_map: dict, jobs: list[dict], problems: list[str], scan: str) -> None:
+    """One status message per channel, before the jobs: "N new jobs" / "no new jobs" + failed sources."""
+    from scan_summary import discord_text
+
+    per_url = {url: [] for url in channels(webhook_map)}
+    for job in jobs:
+        url = route(webhook_map, job)
+        if url in per_url:
+            per_url[url].append(job)
+    for url, routed in per_url.items():
+        stars = sum(1 for j in routed if j.get("Highlight"))
+        send_text(url, discord_text(len(routed), stars, problems, scan))
+        time.sleep(SEND_DELAY)
+
+
+def send_to_discord(webhook_url: str, embed: dict | None, content: str | None = None) -> bool:
     """Send a single embed to a Discord webhook.
 
     Handles rate limiting: if Discord returns 429 (Too Many Requests),
@@ -89,10 +125,13 @@ def send_to_discord(webhook_url: str, embed: dict) -> bool:
     Returns:
         True if the message was sent successfully, False otherwise.
     """
-    payload = {"embeds": [embed]}
+    payload = {"embeds": [embed]} if embed else {}
+    if content:
+        payload["content"] = content
+    payload["allowed_mentions"] = {"parse": []}  # job text is untrusted: never ping @everyone / @here / roles
 
     try:
-        response = requests.post(webhook_url, json=payload)
+        response = requests.post(webhook_url, json=payload, timeout=15)
 
         # 204 = success (Discord returns No Content on webhook posts)
         if response.status_code == 204:
@@ -105,7 +144,7 @@ def send_to_discord(webhook_url: str, embed: dict) -> bool:
             retry_after = float(response.json().get("retry_after", 2))
             logger.warning("Rate limited by Discord, waiting %.1f seconds", retry_after)
             time.sleep(retry_after + 0.1)
-            response = requests.post(webhook_url, json=payload)
+            response = requests.post(webhook_url, json=payload, timeout=15)
         if response.status_code == 204:
             return True
 
@@ -133,16 +172,9 @@ def notify_jobs(webhook_map: dict[str, str], jobs: list[dict]) -> int:
     """
     sent = 0
     skipped = 0
-    keep_category = set(webhook_map.get("_keep_category") or [])
     for i, job in enumerate(jobs, start=1):
         field = job.get("Category") or job.get("Field") or ""
-        webhook_url = webhook_map.get(field)
-        # Route by job type (CV folder) — except default-type jobs in categories that keep their own
-        # channel (integration / validation roles get the general CV but their own channel)
-        type_url = webhook_map.get(f"type:{job.get('Job Type')}")
-        if type_url and not (job.get("Default Type") and field in keep_category):
-            webhook_url = type_url
-        webhook_url = webhook_url or webhook_map.get("*")
+        webhook_url = route(webhook_map, job)
 
         if not webhook_url:
             logger.warning("No webhook for field '%s', skipping: %s", field, job.get("Job Title"))

@@ -1,0 +1,113 @@
+# Answers used by autofill.py / autosubmit.py to fill application forms.
+# Copy this file to autofill.yaml and put YOUR details in it (autofill.yaml stays in your private copy).
+# Every answer here is sent to employers as-is — check each one before turning on auto_submit.
+# Each field: `match` = regex tried against the field's label / placeholder / name (English + Hebrew),
+# `value` (or `he` / `en` — picked by the language of the label). Order matters: first match wins.
+# Fields matching `never_fill` (ID number, passwords, card numbers, CAPTCHA) are NEVER filled —
+# they get a red outline so you see them.
+
+never_fill: 'תעודת\s*זהות|(^|[^א-ת])ת["״׳''.]?ז([^א-ת]|$)|מספר\s*זהות|\bid\s*(number|no)\b|national\s*id|passport|דרכון|password|סיסמ|credit|אשראי|cvv|captcha|social\s*security|\bssn\b'
+
+fields:
+  - match: 'first\s*name|given\s*name|שם\s*פרטי'
+    en: "Firstname"
+    he: "שם-פרטי"
+  - match: 'last\s*name|family\s*name|surname|שם\s*משפחה'
+    en: "Lastname"
+    he: "שם-משפחה"
+  - match: 'hebrew|בעברית'
+    value: "שם מלא בעברית"
+  - match: 'company|employer|organization|מעסיק|שם\s*החברה|חברה\s*נוכחית'
+    value: "Current Company"
+  - match: 'current\s*(job\s*)?title|current\s*(role|position)|תפקיד\s*נוכחי'
+    en: "Current Job Title"
+    he: "התפקיד הנוכחי"
+  - match: 'full\s*name|^\s*\*?\s*name\s*\*?\s*($|\|)|systemfield\s*name|your\s*name|שם\s*מלא|^\s*\*?\s*שם\s*\*?\s*:?\s*$'
+    en: "Firstname Lastname"
+    he: "שם מלא"
+  - match: 'e-?mail|דוא["״]?ל|מייל|אימייל|דואר\s*אלקטרוני'
+    value: "you@example.com"
+  - match: 'phone|mobile|cell|טלפון|נייד|סלולרי|פלאפון'
+    value: "050-0000000"
+  - match: '(current|your)\s*location|^location$'
+    en: "City, Israel"
+    he: "עיר"
+  - match: 'city|town|עיר|ישוב|יישוב|מקום\s*מגורים|אזור\s*מגורים'
+    en: "City"
+    he: "עיר"
+  - match: 'zip|postal|מיקוד'
+    value: "0000000"
+  - match: 'address\s*(line\s*)?2'
+    value: "-"
+  - match: 'address|street|כתובת|רחוב'
+    en: "Street 1, City"
+    he: "רחוב 1, עיר"
+  - match: 'country|מדינה'
+    en: "Israel"
+    he: "ישראל"
+  - match: 'linkedin'
+    value: ""            # your LinkedIn profile URL
+  - match: 'salary|compensation|שכר|ציפיות'
+    value: ""            # e.g. "20,000 ILS gross/month"; number: used for numeric-only fields
+    number: ""
+  - match: 'notice\s*period|availability|start\s*date|זמינות|הודעה\s*מוקדמת|מתי\s*תוכל'
+    en: "30 days"
+    he: "30 יום"
+  - match: 'gpa|grade\s*average|ממוצע'
+    value: ""
+  - match: 'university|institution|school|college|מוסד\s*לימודים|אוניברסיטה|מכללה'
+    en: ""
+    he: ""
+  - match: 'degree|field\s*of\s*study|major|תואר|תחום\s*לימוד'
+    en: ""
+    he: ""
+  - match: 'gender|מגדר|(^|[^א-ת])מין([^א-ת]|$)'
+    en: ""
+    he: ""
+  - match: 'how\s*did\s*you\s*hear|source|איך\s*הגעת|כיצד\s*שמעת'
+    en: "Job board"
+    he: "לוח דרושים"
+  # Empty values are never typed — such a field stays empty, and a required empty field means
+  # auto-submit leaves the job for you.
+
+# Yes/No questions (radio buttons, yes/no dropdowns). First match wins. Answers can also be
+# sentences ("I don't have any family member...") — yes picks the positive one, no the negative one.
+# Change any answer that isn't true for you.
+yes_no:
+  # trade-secret / confidentiality acknowledgment → I Agree
+  - match: 'trade\s*secret|confidential\s*information|סודות\s*מסחר|מידע\s*סודי'
+    answer: yes
+  - match: 'relative|family\s*member|related\s*to|קרוב(י)?\s*משפחה|בן\s*משפחה'
+    answer: no
+  - match: '(current|former|previous|ever)\s*(been\s*)?(an?\s*)?employee|worked\s*(for|at)\s*(us|the\s*company)|עבדת\s*בעבר|מועסק\s*כיום\s*בחברה|עובד\s*לשעבר'
+    answer: no
+  - match: 'non[- ]?compete|non[- ]?solicit|nda|הגבלת\s*עיסוק|אי\s*תחרות'
+    answer: no
+  - match: 'intellectual\s*property|patent|קניין\s*רוחני|פטנט'
+    answer: no
+  - match: 'secondary\s*(job|business)|side\s*business|עיסוק\s*נוסף'
+    answer: no
+  - match: 'government|civil\s*service|ממשלתי|עובד\s*מדינה'
+    answer: no
+  - match: 'sponsor|visa'
+    answer: no
+  - match: 'authori[sz]ed\s*to\s*work|work\s*permit|eligible\s*to\s*work|רשאי\s*לעבוד|אישור\s*עבודה'
+    answer: yes
+  - match: 'relocat|commut|on[- ]?site|office|hybrid|travel|requires\s*attendance|arrive\s*to|located\s*in|מוכן|מוכנה|נכונות|הגעה'
+    answer: yes
+
+  # Personal answers — uncomment and set yours:
+  # - match: 'student|סטודנט'
+  #   answer: no
+  # - match: 'bachelor|b\.?sc|completed\s*(your\s*)?(degree|academic)|graduated|תואר\s*ראשון'
+  #   answer: yes
+  # - match: 'hands[- ]on|lab\s*experience|ניסיון\s*מעשי'
+  #   answer: yes
+  # - match: 'security\s*clearance|סיווג\s*ביטחוני'
+  #   answer: yes
+
+# Checkboxes ticked automatically (consent / privacy / "I agree")
+consent: 'agree|consent|no problem|fine with|arrive to|willing to|happy to|i.?m ok with|coming to|commut|relocat|מוכן\s*ל|מוכנה\s*ל|privacy|terms|acknowledg|i\s*confirm|future\s*(contact|opportunit)|database|מאשר|מאשרת|מסכים|מסכימה|הסכמה|פרטיות|תקנון|מאגר'
+
+# Sites where autofill only opens the page (login / multi-step flows — do them yourself)
+open_only: ['linkedin.com', 'myworkdayjobs.com', 'workday.com']

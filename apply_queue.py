@@ -1,11 +1,14 @@
 """Apply queue: jobs that scored high enough against the CV, waiting for your decision.
 
 The scanner only ADDS candidates here (status "pending"). Nothing is submitted automatically:
-you apply yourself (or with an assistant), one job at a time, and set the status to
-"applied" / "skipped" / "failed" (py apply_queue.py shows the list).
+applications are prepared and sent in a Claude session, one approved job at a time,
+which then updates the status to "applied" / "skipped" / "failed".
 
     py apply_queue.py            # list pending candidates, best first
     py apply_queue.py --all      # include applied / skipped
+    py apply_queue.py --open     # on your PC: open every pending job in the browser, then mark each
+                                 # one (a = applied, s = skip, Enter = keep pending) — no Claude needed.
+                                 # Then: git commit -am "applied" && git push
 """
 
 import json
@@ -80,7 +83,43 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Show the apply queue")
     parser.add_argument("--all", action="store_true", help="Show every status, not only pending")
+    parser.add_argument("--open", action="store_true", help="Open pending jobs in the browser and mark them")
+    parser.add_argument("--mark-manual-applied", metavar="SOURCE",
+                        help="Mark every needs-manual job (the 'left for you' list) as applied; prints them as JSON lines")
     args = parser.parse_args()
+
+    if args.mark_manual_applied:
+        import json
+
+        queue = load_queue()
+        marked = [i for i in queue if i.get("status") == "needs-manual"]
+        for i in marked:
+            i["status"] = "applied"
+            i["note"] = (i.get("note") or "") + f" | applied by you ({args.mark_manual_applied} {date.today():%d/%m})"
+        save_queue(queue)
+        for i in sorted(marked, key=lambda i: -(i.get("score") or 0)):
+            print(json.dumps({k: i.get(k) for k in ("score", "title", "company", "link")}, ensure_ascii=False))
+        sys.exit(0)
+
+    if args.open:
+        import webbrowser
+
+        queue = load_queue()
+        pending = sorted((i for i in queue if i["status"] == "pending"), key=lambda i: -(i.get("score") or 0))
+        if not pending:
+            sys.exit("Nothing pending.")
+        for i in pending:
+            print(f"{i['score']:3d}%  {i['title']} @ {i['company']}   CV: {i.get('cv') or 'cv.pdf'}")
+            webbrowser.open_new_tab(i["link"])
+        print("\nApply in the browser, then mark each job:")
+        for i in pending:
+            ans = input(f"  {i['title']} @ {i['company']}  [a = applied / s = skip / Enter = later]: ").strip().lower()
+            if ans in ("a", "s"):
+                i["status"] = "applied" if ans == "a" else "skipped"
+                i["note"] = f"marked {i['status']} {date.today():%d/%m}"
+        save_queue(queue)
+        print("Saved. Push it:  git commit -am \"apply queue\" && git push")
+        sys.exit(0)
 
     items = [i for i in load_queue() if args.all or i["status"] == "pending"]
     items.sort(key=lambda i: i.get("score") or 0, reverse=True)

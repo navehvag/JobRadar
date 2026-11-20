@@ -149,6 +149,14 @@ sources:
 filter:
   max_experience_years: 4
   max_age_days: 30           # skip jobs posted more than N days ago (sources that give a date)
+  # Seniority words also checked in the posting's LINK — boards sometimes drop "Senior" from the title
+  # while the URL keeps it (…/senior-chip-design-engineer-vlsi). Only seniority words: a link like
+  # …/project-manager loses the context allow_title_keywords needs.
+  exclude_link_keywords: ["senior", "sr", "principal", "staff", "lead", "director", "head", "vp", "chief", "בכיר", "בכירה"]
+  # Jobs of these companies that come with no city (or only "Israel") are filtered as if they were at the
+  # company's usual site. Useful when a source drops the city for a company that is mostly in one area.
+  company_default_location: {}
+  #   "Some Company": "Haifa"
 
   # Source fields that are never relevant (Goozali's "Field" values etc.)
   exclude_fields:
@@ -565,6 +573,7 @@ discord:
   # Default-type (Hardware Engineer CV) jobs in these categories go to the category channel
   # (#integration-validation) instead of #hardware-engineer
   keep_category_channels: ["Integration & System", "Validation & Verification"]
+  scan_summary: true         # one status message per channel before the jobs ("N new" / "no new jobs" + failed sources)
 
 # job type (CV folder) -> env var with that type's channel webhook (one channel per type)
 discord_type_webhooks:
@@ -612,6 +621,13 @@ profile:
   min_evidence: 10           # minimum matched weight for a full score
   highlight_score: 60        # ⭐ in alerts at or above this score
   apply_score: 60            # jobs at or above this go to apply_queue.json for review
+  entry_level_boost: 1.2     # x1.2 for junior / graduate / "0 years" / "no experience required" wording (tag entry-level)
+  entry_level_keywords: []   # extra words that mean entry-level for you
+  skip_student_roles: true   # student / intern-only postings score 0 (junior titles that also accept students still count)
+  no_degree_factor: 1.0      # e.g. 0.4 to push "no degree required" / technician / assembler roles down
+  # Your degree field(s): a requirement line listing alternatives that include yours
+  # ("Biomedical / Electrical / Mechanical Engineering") doesn't count its other fields as gaps.
+  degree_keywords: []        # e.g. ["electrical", "electronics", "חשמל", "אלקטרוניקה"]
 
   skills:
     # RF / analog
@@ -773,3 +789,20 @@ job_types:
     default: true
     title_keywords: ["hardware", "hw", "electronics", "electrical", "analog", "circuit", "חומרה",
                      "אלקטרוניקה", "חשמל"]
+
+# ------------------------------------------------------------------ auto-submit (autosubmit.py)
+# After each scan, pending apply-queue jobs (score >= min_score, best first) are opened in a headless
+# browser, filled from autofill.yaml (copy autofill.example.yaml and put YOUR details in it) and
+# SUBMITTED only when the form is clean: no CAPTCHA or bot protection (never solved), no login, no ID
+# number field, every required field filled, CV attached, one clear Submit button — and a confirmation
+# must appear. Everything else is marked needs-manual; one Telegram message lists what was sent and the
+# links left for you (reply "submitted" when you've done them). Screenshots: autosubmit_shots/.
+# Start with dry_run: true and check the Telegram report before turning it on.
+auto_submit:
+  enabled: false
+  dry_run: true          # true = fill + decide + report only, never click Submit
+  min_score: 50
+  max_per_day: 30
+  manual_domains: ["linkedin.com", "myworkdayjobs.com", "workday.com", "hiremetech.com", "alljobs.co.il",
+                   "jobmaster.co.il", "recruitics.com", "jobs.apple.com", "indeed.com", "drushim.co.il"]
+  manual_tags: ["students also accepted?", "title only — check the posting"]

@@ -1,0 +1,3 @@
+# Only for autofill.py (your PC) and autosubmit.py (installed automatically when auto_submit is on) — the scanner does not need it
+selenium>=4.20
+pyyaml

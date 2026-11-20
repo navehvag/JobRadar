@@ -221,3 +221,7 @@ scan.log
 # (the workflows read and update them). Keep your copy private.
 dryrun.txt
 rescore.txt
+
+# autofill / auto-submit: browser profile (your site logins) and form screenshots — never commit
+.autofill_browser/
+autosubmit_shots/

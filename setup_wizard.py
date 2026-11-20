@@ -27,6 +27,16 @@ SENIORITY_WORDS = [
     "בכיר", "בכירה", "ראש צוות", "ראש תחום", "ראש מחלקה", "מנהל", "מנהלת", "מוביל", "מובילה",
     "מומחה", "מומחית", "ארכיטקט", "סטודנט", "סטודנטית", "מנוסה", "ראש/ת", "ראש.ת",
 ]
+# Seniority words also checked in a posting's LINK (boards sometimes drop "Senior" from the title but the
+# URL keeps it: …/senior-chip-design-engineer). Only these — a slug loses the context of role titles.
+LINK_SENIORITY = ["senior", "sr", "principal", "staff", "lead", "director", "head", "vp", "chief", "בכיר", "בכירה"]
+
+
+def link_words_for(hidden: list[str]) -> list[str]:
+    hidden = {w.lower() for w in hidden}
+    return [w for w in LINK_SENIORITY if w in hidden or (w == "head" and "head of" in hidden)]
+
+
 CONFIG = "config.yaml"
 ENV = ".env"
 
@@ -262,6 +272,7 @@ def main() -> None:
     flt["locations"] = [] if ("*" in reg or not reg) else list(dict.fromkeys(p for k in reg for p in regions[k]["places"]))
     hidden = [w for k, words in cat["level_words"].items() if k not in lv for w in words]
     flt["exclude_title_keywords"] = hidden
+    flt["exclude_link_keywords"] = link_words_for(hidden)
     # role titles that contain a hidden word ("project manager" while "manager" is hidden) stay allowed
     from job_filter import compile_keywords
     hidden_re = compile_keywords(hidden)
@@ -380,6 +391,7 @@ def from_github_inputs() -> None:
     flt["locations"] = split_csv(e("LOCATIONS"))
     hide_senior = e("HIDE_SENIOR", "true").lower() in ("true", "yes", "y", "1")
     flt["exclude_title_keywords"] = (SENIORITY_WORDS[:] if hide_senior else []) + split_csv(e("EXCLUDE_WORDS"))
+    flt["exclude_link_keywords"] = link_words_for(flt["exclude_title_keywords"])
     flt["allow_title_keywords"], flt["exclude_fields"] = [], []
 
     prof = cfg["profile"]

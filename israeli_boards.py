@@ -86,11 +86,15 @@ def parse_alljobs_page(page_html: str) -> list[dict]:
         title = _text(_first(r"<h2[^>]*>(.*?)</h2>", chunk))
         if not job_id or not title:
             continue
+        # AllJobs mixes CLOSED postings into the results (class "closed-job", old date, no company) — skip them
+        if re.search(r"""class=["'][^"']*\bclosed-job\b""", chunk):
+            continue
         company = _text(_first(r"""class=["']T14["'][^>]*>(.*?)</div>""", chunk)) or None
         location = _text(_first(r"""class=["'][^"']*job-content-top-location[^"']*["'][^>]*>(.*?)</div>""", chunk))
         location = re.sub(r"^\s*מיקום המשרה\s*:?\s*", "", location).replace("\n", ", ").strip() or None
         age = _text(_first(r"""class=["']job-content-top-date["'][^>]*>(.*?)</div>""", chunk))
-        desc = _first(r"""class=["']job-content-top-desc[^"']*AR[^"']*["'][^>]*>(.*?)(?:<div[^>]*class=["']job-content-top-desc["']|job-content-top-moreimg|$)""", chunk)
+        # the description box is "AR RTL" for Hebrew and "AL LTR" for English posts (was: Hebrew only -> English posts had no text)
+        desc = _first(r"""class=["']job-content-top-desc[^"']*\b(?:AR|AL)\b[^"']*["'][^>]*>(.*?)(?:<div[^>]*class=["']job-content-top-desc["']|job-content-top-moreimg|$)""", chunk)
         jobs.append({
             "Job ID": f"aj-{job_id}",
             "Job Title": title,
@@ -196,6 +200,19 @@ def scrape_jobmaster(queries: list[str], max_pages: int = 1, delay: float = 1.0)
     return list(seen.values())
 
 
+def _block(page: str, element_id: str, limit: int = 4000) -> str | None:
+    """Inner HTML of the element with this id, including nested tags (up to its matching </div>)."""
+    m = re.search(r"""<(div|section)[^>]*id=["']%s["'][^>]*>""" % element_id, page)
+    if not m:
+        return None
+    tag, pos, depth = m.group(1), m.end(), 1
+    for t in re.finditer(r"<(/?)%s\b[^>]*>" % tag, page[pos:pos + limit * 3]):
+        depth += -1 if t.group(1) else 1
+        if depth == 0:
+            return page[pos:pos + t.start()]
+    return page[pos:pos + limit]
+
+
 def fetch_jobmaster_descriptions(jobs: list[dict], limit: int = 100) -> int:
     """JobMaster cards only show a short description; fetch the full description and
     requirements for the given jobs (only the ones that passed the filter)."""
@@ -208,8 +225,8 @@ def fetch_jobmaster_descriptions(jobs: list[dict], limit: int = 100) -> int:
             r = session.get(job["_detail_url"], timeout=TIMEOUT)
             r.raise_for_status()
             page = r.text
-            desc = _first(r"""id=["']jobDescriptionContent["'][^>]*>(.*?)</div>""", page)
-            reqs = _first(r"""id=["']jobRequirementsContent["'][^>]*>(.*?)</div>""", page)
+            desc = _block(page, "jobDescriptionContent")
+            reqs = _block(page, "jobRequirementsContent")
             if desc:
                 job["Job Description"] = _text(desc)
             job["Requirements"] = _text(reqs)

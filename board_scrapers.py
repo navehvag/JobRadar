@@ -43,6 +43,10 @@ def parse_hireme_job(raw: dict) -> dict:
     loc = raw.get("location") or {}
     city = loc.get("city") or (loc.get("basic") or {}).get("city")
     display = (loc.get("basic") or {}).get("display_name")
+    # many postings give only the country; the nearest train station then tells the area
+    station = (loc.get("transit") or {}).get("nearest_station")
+    if not city and station and (display or "").strip().lower() in ("", "israel"):
+        city = station
     company = raw.get("company_name") or (raw.get("company") or {}).get("name") or ""
     description = raw.get("description") or ""
     return {
@@ -53,6 +57,7 @@ def parse_hireme_job(raw: dict) -> dict:
         "Field": raw.get("department") or None,
         "Min Experience (Y)": (raw.get("experience") or {}).get("min_years"),
         "Position Link": raw.get("apply_url") or raw.get("site_url") or raw.get("job_url"),
+        "_employer_url": raw.get("job_url"),
         "Requirements": description,
         "Job Description": description,
         "platform": "hiremetech",
@@ -83,6 +88,59 @@ def scrape_hiremetech(queries: list[str], max_pages: int = 3, posted_days: int |
     jobs = list(seen.values())
     logger.info("HireMeTech: %d unique jobs from %d queries", len(jobs), len(queries))
     return jobs
+
+
+THIN_DESCRIPTION = 200  # HireMe often sends only the title as "description"
+
+
+def _html_text(page: str) -> str:
+    page = re.sub(r"(?is)<(script|style|noscript|svg|header|footer|nav)[^>]*>.*?</\1>", " ", page)
+    page = re.sub(r"(?i)<(br|/p|/li|/div|/h\d|/tr)[^>]*>", "\n", page)
+    import html as _h
+    text = _h.unescape(re.sub(r"<[^>]+>", " ", page))
+    return "\n".join(l.strip() for l in text.splitlines() if l.strip())
+
+
+def fetch_hireme_descriptions(jobs: list[dict], limit: int = 60) -> int:
+    """HireMe search results often carry only the title. For HireMe jobs that passed the filter
+    and have a thin description: 1) HireMe's job API (/api/jobs/<id>: description + requirements),
+    2) still thin -> the employer's own job page (job_url), as plain text."""
+    session = _session()
+    done = 0
+    for job in jobs:
+        jid = str(job.get("Job ID") or "")
+        if not jid.startswith("hm-") or done >= limit:
+            continue
+        if len(job.get("Requirements") or "") >= THIN_DESCRIPTION:
+            continue
+        text = ""
+        try:
+            r = session.get(f"https://hiremetech.com/api/jobs/{jid[3:]}", timeout=TIMEOUT)
+            r.raise_for_status()
+            d = r.json()
+            d = d.get("job") or d
+            text = "\n".join(str(d.get(k) or "") for k in ("description", "requirements")).strip()
+            job["_employer_url"] = job.get("_employer_url") or d.get("job_url")
+        except Exception as e:
+            logger.warning("HireMe job API failed for %s: %s", job.get("Job Title"), e)
+        url = job.get("_employer_url")
+        if len(text) < THIN_DESCRIPTION and url and "hiremetech.com" not in url:
+            try:
+                pause(0.4)
+                r = session.get(url, timeout=TIMEOUT)
+                r.raise_for_status()
+                page = _html_text(r.text)
+                if len(page) > len(text):
+                    text = page[:12000]
+            except Exception as e:
+                logger.warning("Employer page failed for %s: %s", job.get("Job Title"), e)
+        if len(text) > len(job.get("Requirements") or ""):
+            job["Requirements"] = job["Job Description"] = text
+            done += 1
+        pause(0.4)
+    if done:
+        logger.info("Fetched %d HireMe job descriptions", done)
+    return done
 
 
 # ---------------------------------------------------------------- Workday

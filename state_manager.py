@@ -31,8 +31,16 @@ def save_state(sent_ids: set[int | str], path: str = STATE_FILE) -> None:
 _COMPANY_NOISE = re.compile(r"\b(ltd|inc|llc|corp|corporation|technologies|technology|group|israel|il)\b")
 
 
+# Boards that hide the employer ("AllJobs (company hidden)") or a "Confidential" company: company+title is
+# NOT an identity there — many different jobs share a generic title like "Sales Engineer" — so those
+# are de-duplicated by Job ID only (they used to block every later job with the same title).
+_PLACEHOLDER_COMPANY = re.compile(r"company hidden|confidential|חסוי|חסויה|לא צוין|undisclosed|stealth", re.IGNORECASE)
+
+
 def job_key(job: dict) -> str | None:
     """Source-independent identity: normalized company + title (e.g. the same job on Goozali and LinkedIn)."""
+    if _PLACEHOLDER_COMPANY.search(str(job.get("Company") or "")):
+        return None
     norm = lambda s: re.sub(r"[^0-9a-z\u0590-\u05ff]+", "", s)
     title = norm(str(job.get("Job Title") or "").lower())
     company = norm(_COMPANY_NOISE.sub("", str(job.get("Company") or "").lower()))

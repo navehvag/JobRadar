@@ -17,6 +17,7 @@ Based on [job-scanner](https://github.com/yairMar1/job-scanner) by Yair Margalit
 - [How it works](#how-it-works)
 - [Setup on GitHub (10 minutes, no installation)](#setup-on-github-10-minutes-no-installation)
 - [Using it day to day](#using-it-day-to-day)
+- [Applying: autofill and auto-submit (optional)](#applying-autofill-and-auto-submit-optional)
 - [Changing the schedule](#changing-the-schedule)
 - [Configuration reference](#configuration-reference)
 - [Sources](#sources)
@@ -50,7 +51,7 @@ Based on [job-scanner](https://github.com/yairMar1/job-scanner) by Yair Margalit
 3. **Deduplicate.** Never sends the same job twice, even when two sites list it (matched by company + title). Sent jobs are remembered in `state.json` in your repository.
 4. **Score.** Each job gets a **job type** (by its title), and with it the CV to use, plus a **0–100 match** against your skills.
 5. **Notify.** Each job goes to the Discord channel for its job type and/or to Telegram, showing the match % and the skills it matched.
-6. **Apply queue.** Jobs at or above your threshold go to `apply_queue.json`, and each run's summary page lists them. Nothing is ever submitted automatically.
+6. **Apply queue.** Jobs at or above your threshold go to `apply_queue.json`, and each run's summary page lists them. Nothing is submitted unless you turn on [auto-submit](#applying-autofill-and-auto-submit-optional) (off by default).
 
 ---
 
@@ -163,10 +164,32 @@ Everything happens on GitHub:
 | Re-score everything after changing skills | **Run workflow → `rescore`** |
 | Change filters, skills, sources, search terms | Edit `config.yaml` on GitHub. The next run uses it |
 | Mark a job as applied / skipped | Edit `apply_queue.json` on GitHub: change its `"status"` to `"applied"` / `"skipped"` (optionally add a `"note"`). Only `pending` jobs are listed |
+| Mark the "left for you" list as applied | Write **submitted** (or **הגשתי**) to your Telegram bot. The next scan marks every `needs-manual` job applied and replies with the list |
+| See why a job scored what it did | `scan_log.json` keeps every sent job's score and matched skills / gaps for 45 days (`python scan_log.py`) |
+| Check whether a source is blocked | Each scan posts a status message first ("N new" / "no new jobs") with a ⚠️ line for sources that failed or returned 0. History: `python scan_summary.py` |
 | Pause the scanner | **Actions → Scan → ⋯ → Disable workflow** |
 | Start the configuration over | **Actions → Setup → Run workflow** |
 
 **GitHub Actions minutes.** A scan takes about 5–15 minutes. Four scans a day, five days a week, is roughly 400–1,300 minutes a month. Private repositories get 2,000 free minutes a month on GitHub Free. If you get close to the limit, scan fewer times a day.
+
+---
+
+## Applying: autofill and auto-submit (optional)
+
+Both read your answers from **`autofill.yaml`**: copy `autofill.example.yaml` to `autofill.yaml` in your private copy and put **your** details in it (name, email, phone, city, salary expectation, yes/no answers). Every answer there is sent to employers as written, so check it. Fields asking for an ID number, a password, card details or a CAPTCHA are never filled.
+
+**autofill.py: you press Submit.** On your own computer (needs `pip install -r requirements-autofill.txt` and Chrome):
+
+```bash
+python autofill.py            # opens each pending job, fills the form, attaches the job type's CV
+python autofill.py --top 5    # only the 5 best
+```
+
+It never clicks Submit. You check, solve any bot check, submit, and answer `a` (applied) or `s` (skip) per job.
+
+**autosubmit.py: submits clean forms by itself after each scan.** Turn it on in `config.yaml` → `auto_submit` (start with `dry_run: true` and read the Telegram report first). It submits **only** when the form is clean: no CAPTCHA or bot protection (these are never solved or worked around), no login, no ID-number field, every required field filled, CV attached, exactly one Submit button. A confirmation ("thank you", "תודה", "ההודעה נשלחה" …) must appear afterwards, or the job is left for you as "check before re-applying". Sites that need an account (LinkedIn, Workday, HireMe, AllJobs, JobMaster…) are always left for you.
+
+After each run, one Telegram message lists what was submitted (now and earlier today) and the links left for you. When you've done those, reply **submitted**. It runs on GitHub Actions too: a headless Chrome is installed by the Scan workflow only when `auto_submit.enabled` is true. Screenshots of each filled form go to `autosubmit_shots/` (not committed).
 
 ---
 
@@ -232,11 +255,17 @@ For the job's type, the scanner looks at the skills from your `profile` plus tha
 fit        = matched skill weight / (matched + gaps the job asks for)
 evidence   = enough matched weight in the description (min_evidence), not just in the title
 experience = a penalty when the job asks for more years than you have
-score      = 100 × fit × evidence × experience   (+10% for junior / graduate wording)
+score      = 100 × fit × evidence × experience   (×1.2 for entry-level wording: junior / graduate / "0 years")
 ```
 
 - Lines marked "advantage / nice to have / יתרון" count less.
-- Student-only roles score 0 (`skip_student_roles`).
+- Student-only roles score 0 (`skip_student_roles`). A junior / graduate title that also accepts students is scored normally and tagged `students also accepted?`.
+- Required years come only from lines about experience: "a company with 30 years of activity" or "5 years of X – an advantage" don't count. Years written as words ("חמש שנות ניסיון", "שנתיים") are read too.
+- When the same job comes from several sources, every copy gets the fullest description before filtering and scoring.
+- A job with no real description (some boards send just the title) is scored from the title and tagged `title only — check the posting`, instead of 0.
+- `degree_keywords`: on a line like "Biomedical / Electrical / Mechanical Engineering" that also names your field, the other fields aren't counted as gaps.
+- `no_degree_factor` (default 1.0): set e.g. 0.4 to push technician / "no degree required" roles down.
+- Hebrew keywords match gender forms (מהנדס/ת, מהנדס.ת) and doubled י / ו spellings automatically.
 - A type with `require_context` scores 0 when the job mentions none of its words. For example, "project manager" jobs only count when they mention an engineering context.
 - Each job's matched skills (and `-gaps`) are shown in the notification, so you can see why it scored what it did and tune your lists.
 
@@ -334,6 +363,15 @@ JobRadar/
 ├── polite.py             # Randomized pauses + random start delay
 ├── state_manager.py      # Dedup (state.json)
 ├── apply_queue.py        # apply_queue.json
+├── scan_summary.py       # Status message before the jobs + failed-source alerts (per-source history)
+├── scan_log.py           # scan_log.json: every sent job's score breakdown (45 days)
+├── autofill.py           # Fills application forms in your browser; you press Submit
+├── autofill_fill.js      # In-page form filling (rules from autofill.yaml)
+├── autofill.example.yaml # Your answers for forms → copy to autofill.yaml
+├── autosubmit.py         # Optional: submits clean forms after each scan (auto_submit in config.yaml)
+├── telegram_commands.py  # "submitted" written to the bot → mark the left-for-you list applied
+├── notify_admin.py       # Telegram / Discord alert when results can't be saved
+├── secrets_env.py        # Loads .env / GitHub secrets for the helper scripts
 ├── discord_notifier.py   # Discord embeds, channel per job type
 ├── telegram_notifier.py  # Telegram messages (+ --setup helper)
 ├── company_finder.py     # Finds companies with public Greenhouse / Lever boards

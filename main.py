@@ -13,11 +13,13 @@ try:
 except ImportError:
     load_dotenv = None  # Running in CI, env vars set by GitHub Actions
 
-from discord_notifier import notify_jobs
+from discord_notifier import notify_jobs, notify_summary
 from telegram_notifier import build_targets, notify_jobs_telegram
-from job_filter import filter_jobs
+from scan_summary import record_sources, scan_label, source_history, source_problems, telegram_text  # telegram_text: dry-run print only
+from job_filter import filter_jobs, required_years_text
 from apply_queue import add_candidates, rebuild_pending
-from board_scrapers import fetch_workday_descriptions
+from scan_log import record_scan
+from board_scrapers import fetch_hireme_descriptions, fetch_workday_descriptions
 from israeli_boards import fetch_jobmaster_descriptions
 from matcher import score_jobs
 from polite import start_jitter
@@ -25,6 +27,25 @@ from sources import format_report, scrape_all
 from state_manager import filter_new_jobs, job_key, load_state, save_state
 
 logger = logging.getLogger(__name__)
+
+
+def share_descriptions(jobs: list[dict]) -> None:
+    """The same job often comes from several sources (Goozali + the company's own feed + LinkedIn), and only
+    some carry the full text. Give every copy the longest description, so the years-of-experience filter and
+    the score see it (an IAI job via Goozali had no text, while IAI's own feed said "5+ years")."""
+    best: dict[str, dict] = {}
+    for j in jobs:
+        k = job_key(j)
+        if k and len(str(j.get("Requirements") or "")) > len(str((best.get(k) or {}).get("Requirements") or "")):
+            best[k] = j
+    n = 0
+    for j in jobs:
+        b = best.get(job_key(j) or "")
+        if b is not None and b is not j and len(str(b.get("Requirements") or "")) > len(str(j.get("Requirements") or "")) + 50:
+            j["Requirements"], j["Job Description"] = b.get("Requirements"), b.get("Job Description") or b.get("Requirements")
+            n += 1
+    if n:
+        logger.info("Copied a fuller description to %d jobs from another source", n)
 
 
 def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = False, rescore: bool = False) -> None:
@@ -38,6 +59,7 @@ def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = Fals
     """
     if load_dotenv:
         load_dotenv()
+
     # On GitHub Actions every repository secret arrives as one JSON blob (ALL_SECRETS), so any
     # webhook secret name from config.yaml works without listing it in the workflow
     if os.environ.get("ALL_SECRETS"):
@@ -92,11 +114,29 @@ def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = Fals
     logger.info("Step 1: Scraping all sources...")
     jobs, report = scrape_all(config)
     logger.info("Total scraped: %d", len(jobs))
+    share_descriptions(jobs)
 
     # 2. Filter
     logger.info("Step 2: Filtering jobs...")
     filtered = filter_jobs(jobs, config["filter"])
     print("\n" + format_report(report, filtered) + "\n")
+
+    # Sources that failed / returned nothing unusually — shown at the top of this scan's messages
+    problems = source_problems(report, source_history())
+    if problems:
+        logger.warning("Source problems: %s", "; ".join(problems))
+    if not (dry_run or rescore or mark_seen):
+        from collections import Counter
+        record_sources(report, dict(Counter(j.get("Source") for j in filtered)))
+
+    def send_summary(jobs_to_send: list[dict]) -> None:
+        """Status message first: N new jobs / no new jobs, per Discord channel."""
+        scan = scan_label()
+        if dry_run:
+            print(telegram_text(jobs_to_send, problems, scan) + "\n")
+            return
+        if webhook_map and discord_cfg.get("scan_summary", True):
+            notify_summary(webhook_map, jobs_to_send, problems, scan)
 
     if rescore:
         _rescore(filtered, config)
@@ -109,11 +149,26 @@ def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = Fals
 
     if not new_jobs:
         logger.info("No new jobs to send. Done!")
+        if not (mark_seen or rescore):
+            send_summary([])
         return
 
     # Score against the CV profile; best matches are sent first
     fetch_workday_descriptions(new_jobs)
     fetch_jobmaster_descriptions(new_jobs)
+    fetch_hireme_descriptions(new_jobs)
+    # The filter's "years in the requirements" check ran before these descriptions existed —
+    # run it again; dropped jobs are remembered as seen so they aren't fetched every scan.
+    max_exp = config["filter"]["max_experience_years"]
+    too_senior = [j for j in new_jobs if max(required_years_text(str(j.get("Requirements") or "")), default=0) > max_exp]
+    if too_senior:
+        logger.info("Dropped %d jobs asking for more than %d years (seen in the full description)",
+                    len(too_senior), max_exp)
+        new_jobs = [j for j in new_jobs if j not in too_senior]
+        if not (dry_run or rescore):
+            sent_ids.update(j["Job ID"] for j in too_senior if j.get("Job ID") is not None)
+            sent_ids.update(k for k in map(job_key, too_senior) if k)
+            save_state(sent_ids)
     score_jobs(new_jobs, config.get("profile"), config.get("job_types"))
     new_jobs.sort(key=lambda j: j.get("Match Score", 0), reverse=True)
     highlight = (config.get("profile") or {}).get("highlight_score", 60)
@@ -137,6 +192,7 @@ def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = Fals
         new_jobs = new_jobs[:limit]
 
     if dry_run:
+        send_summary(new_jobs)
         print(f"DRY RUN — {len(new_jobs)} new jobs would be sent:\n")
         for job in new_jobs:
             loc = job.get("Location")
@@ -147,7 +203,8 @@ def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = Fals
             print(f"      {job.get('Position Link')}")
         return
 
-    # 4. Notify
+    # 4. Notify — the scan summary goes first
+    send_summary(new_jobs)
     sent_count = 0
     if webhook_map:
         logger.info("Step 4a: Sending %d new jobs to Discord...", len(new_jobs))
@@ -158,6 +215,8 @@ def main(limit: int | None = None, dry_run: bool = False, mark_seen: bool = Fals
 
     # Strong matches go to the apply queue (reviewed and submitted with Claude, never automatically)
     add_candidates(new_jobs, apply_score)
+    # Every sent job's score + breakdown, also below apply_score (scan_log.json)
+    record_scan(new_jobs, apply_score)
 
     # 5. Save state — add the Job IDs of successfully processed jobs
     new_ids = {job["Job ID"] for job in new_jobs if job.get("Job ID") is not None}
@@ -177,6 +236,7 @@ def _rescore(jobs: list[dict], config: dict) -> None:
     profile = config.get("profile") or {}
     fetch_workday_descriptions(jobs)
     fetch_jobmaster_descriptions(jobs)
+    fetch_hireme_descriptions(jobs)
     score_jobs(jobs, profile, config.get("job_types"))
     jobs.sort(key=lambda j: j.get("Match Score", 0), reverse=True)
     apply_score = profile.get("apply_score", 60)
